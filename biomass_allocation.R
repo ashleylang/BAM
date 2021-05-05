@@ -1,49 +1,28 @@
 ##allometry of AM vs EMC trees
 ###using the BAAD dataset (Falster et al 2015 Ecology)
 
-#Fiona is editing this in her Rstudio 
-#fiona edited this without forking, and now is a collaborator
-
-#Hello this is Ashley again
-
-#fiona is sending this back to ashley
-
-#fiona is changing this again
-
-#hello. my name is Inigo Montoya
-
-#A NEW CHANGE FROM FIONA
-
 #only need to do this once:
 #install.packages("devtools")
 #devtools::install_github("richfitz/datastorr")
 #devtools::install_github("traitecoevo/baad.data")
 
-#install libraries
+#load libraries
 library(baad.data)
 library(tidyverse)
 library(cowplot)
+library(raster)
+library(sp)
 theme_set(theme_cowplot())
 
-#get allometry database into a dataframe
-baad <- baad.data::baad_data()
-dict <- as.data.frame(baad$dictionary)
-baad_df <- as.data.frame(baad$data)
-
-#select useful columns
-baad_df <- baad_df %>%
-  dplyr::select(latitude, longitude, species, vegetation, map, mat, speciesMatched, pft, a.lf, h.t, d.bh, m.lf, m.st, m.so, m.rt, m.to, 	ma.ilf) %>%
-  separate(col = speciesMatched, into = c("genus", "sp"), sep = " ")
 
 ###get FUNGALROOT data----
 FR_occurrences <- read_csv("FR_occurrences.csv")
 FR_measurements <- read_csv("FR_measurements.csv") %>%
-  pivot_wider(names_from = measurementType, values_from = measurementValue) 
-
-colnames(FR_measurements)[3] <- "Myc_type"
+  pivot_wider(names_from = measurementType, values_from = measurementValue) %>% 
+  rename(Myc_type='Mycorrhiza type')
 
 fungal_root <- left_join(FR_occurrences, FR_measurements, by = "CoreID") %>%
-  select(order, family, genus, scientificName, Myc_type) %>%
+  dplyr::select(order, family, genus, scientificName, Myc_type) %>%
   group_by(order, family, genus, scientificName, Myc_type) %>%
   summarise(n = n())
 
@@ -58,10 +37,30 @@ fungal_root_genus <- fungal_root %>%
   summarise(number= n()) %>%
   slice_max(order_by = number, n = 1)
 
+
+#get allometry database into a dataframe & add mycorrhizal associations
+baad <- baad.data::baad_data()
+dict <- as.data.frame(baad$dictionary)
+baad_df <- as.data.frame(baad$data) %>% #Q from Ashley: What is the difference between species and speciesMatched?
+  dplyr::select(studyName, latitude, longitude, species, vegetation, map, mat, speciesMatched, pft, a.lf, h.t, d.bh, m.lf, m.st, m.so, m.rt, m.to, 	ma.ilf) %>%
+  separate(col = speciesMatched, into = c("genus", "sp"), sep = " ") %>% 
+  left_join(fungal_root_genus, by = "genus") %>% 
+  mutate(LmSm = m.lf/ m.st,
+         LmSo = m.lf/ m.so,
+         LmTm = m.lf/ m.to,
+         LaSm = a.lf/ m.st,
+         LmLa = m.lf/ a.lf,
+         RmTm = m.rt/m.to,
+         pft = as.factor(pft)) %>% 
+   filter( myc_group != "ERC" & myc_group != "Other" & pft != "DG")# %>%
+#   dplyr::select(studyName, pft, Temp, mat, Prec, vegetation, myc_group, h.t, m.so, m.to, m.rt, m.lf, LmSo, LmTm, LmSm, LaSm, LmLa, RmTm) 
+
+# sub <- bigdf %>%
+#   group_by(pft) %>%
+#   summarise(n_distinct(species)) 
+
 ###MAT/MAP----
-###also need worldclim data because most of the BAAD database don't have MAT/MAP
-library(raster)
-library(sp)
+###Need worldclim data because most of the BAAD database don't have MAT/MAP
 
 r <- getData("worldclim",var="bio",res=10)
 r <- r[[c(1,12)]]
@@ -73,33 +72,17 @@ coords <- data.frame(x=baad_df$longitude, y=baad_df$latitude) %>%
 
 points <- SpatialPoints(coords, proj4string = r@crs)
 values <- extract(r,points)
-df <- cbind.data.frame(coordinates(points),values)
-df <- df %>%
+df <- cbind.data.frame(coordinates(points),values)%>%
   rename(latitude = y, longitude = x)
 
-baad_df2 <- left_join(baad_df, df)
+#sooo....what are the units of temp??
+#Also some missing values for temp/precip that maybe we should back-fill.
 
-##add myc typ from FR genus to BAAD----
-bigdf <- left_join(baad_df2, fungal_root_genus, by = "genus") %>% 
-  mutate(LmSm = m.lf/ m.st,
-         LmSo = m.lf/ m.so,
-         LmTm = m.lf/ m.to,
-         LaSm = a.lf/ m.st,
-         LmLa = m.lf/ a.lf,
-         RmTm = m.rt/m.to,
-         pft = as.factor(pft))
+#Now the full version of the data with baad_df, myc types, and climate:
+full_df = baad_df %>% 
+  left_join(df, by=c("latitude", "longitude"))
 
-forests <- c("TropRF", "TropSF", "TempRF", "TempF", "BorF")
-
-bigdf$FT <- ifelse(bigdf$vegetation == "BorF", "Boreal", ifelse(bigdf$vegetation %in% c("TempF", "TempRF"), "Temperate", ifelse(bigdf$vegetation %in% c("TropRF", "TropSF"), "Tropical", "nonF")))
-
-sub <- bigdf %>%
-  filter(vegetation %in% forests & myc_group != "ERC" & myc_group != "Other" & pft != "DG") %>%
-  dplyr::select(pft, Temp, mat, Prec, vegetation, FT, myc_group, h.t, m.so, m.to, m.rt, m.lf, LmSo, LmTm, LmSm, LaSm, LmLa, RmTm) 
-
-sub_s <- sub %>%
-  group_by(pft) %>%
-  summarise(n_distinct())
+###Making some plots:----
   
 a <- ggplot(sub, aes(x = log(h.t), y = LmTm)) +
   geom_point(aes(color = myc_group)) +
