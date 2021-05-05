@@ -1,6 +1,9 @@
 ##allometry of AM vs EMC trees
 ###using the BAAD dataset (Falster et al 2015 Ecology)
 
+
+#Fiona is editing this in her Rstudio 
+
 #only need to do this once:
 install.packages("devtools")
 devtools::install_github("richfitz/datastorr")
