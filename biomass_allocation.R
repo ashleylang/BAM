@@ -52,11 +52,7 @@ ERCS = c("ErM, AM", "ErM, EcM", "ErM")
 
 fungal_root$myc_group <- ifelse(fungal_root$Myc_type == "AM", "AM", ifelse(fungal_root$Myc_type == "ECM,AM", "ECM,AM", ifelse(fungal_root$Myc_type %in% ECMS, "ECM", ifelse(fungal_root$Myc_type %in% ERCS, "ERC", "Other"))))
 
-fungal_root_family <- fungal_root %>%
-  group_by(order, family, myc_group) %>%
-  summarise(number= n()) %>%
-  slice_max(order_by = number, n = 1)
-
+#create df based on FungalRoot that has the most common mycorrhizal type associated with each genus of plant
 fungal_root_genus <- fungal_root %>%
   group_by(order, family, genus, myc_group) %>%
   summarise(number= n()) %>%
