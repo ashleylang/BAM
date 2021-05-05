@@ -84,14 +84,14 @@ df <- df %>%
 baad_df2 <- left_join(baad_df, df)
 
 ##add myc typ from FR genus to BAAD----
-bigdf <- left_join(baad_df2, fungal_root_genus, by = "genus")
-bigdf$LmSm = bigdf$m.lf/ bigdf$m.st
-bigdf$LmSo = bigdf$m.lf/ bigdf$m.so
-bigdf$LmTm = bigdf$m.lf/ bigdf$m.to
-bigdf$LaSm = bigdf$a.lf/ bigdf$m.st
-bigdf$LmLa = bigdf$m.lf/bigdf$a.lf
-bigdf$RmTm = bigdf$m.rt/bigdf$m.to
-bigdf$pft = as.factor(bigdf$pft)
+bigdf <- left_join(baad_df2, fungal_root_genus, by = "genus") %>% 
+  mutate(LmSm = m.lf/ m.st,
+         LmSo = m.lf/ m.so,
+         LmTm = m.lf/ m.to,
+         LaSm = a.lf/ m.st,
+         LmLa = m.lf/ a.lf,
+         RmTm = m.rt/m.to,
+         pft = as.factor(pft))
 
 
 forests <- c("TropRF", "TropSF", "TempRF", "TempF", "BorF")
