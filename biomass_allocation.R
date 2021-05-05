@@ -1,28 +1,29 @@
 ##allometry of AM vs EMC trees
 ###using the BAAD dataset (Falster et al 2015 Ecology)
 
-
 #Fiona is editing this in her Rstudio 
 #fiona edited this without forking, and now is a collaborator
 
 #only need to do this once:
-install.packages("devtools")
-devtools::install_github("richfitz/datastorr")
-devtools::install_github("traitecoevo/baad.data")
+#install.packages("devtools")
+#devtools::install_github("richfitz/datastorr")
+#devtools::install_github("traitecoevo/baad.data")
 
+#install libraries
 library(baad.data)
 library(tidyverse)
 library(cowplot)
 theme_set(theme_cowplot())
 
+#get allometry database into a dataframe
 baad <- baad.data::baad_data()
 dict <- as.data.frame(baad$dictionary)
 baad_df <- as.data.frame(baad$data)
 
+#select useful columns
 baad_df <- baad_df %>%
   dplyr::select(latitude, longitude, species, vegetation, map, mat, speciesMatched, pft, a.lf, h.t, d.bh, m.lf, m.st, m.so, m.rt, m.to, 	ma.ilf) %>%
   separate(col = speciesMatched, into = c("genus", "sp"), sep = " ")
-
 
 ###get FUNGALROOT data----
 FR_occurrences <- read_csv("FR_occurrences.csv")
