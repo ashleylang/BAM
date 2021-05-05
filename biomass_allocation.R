@@ -89,7 +89,6 @@ bigdf <- left_join(baad_df2, fungal_root_genus, by = "genus") %>%
          RmTm = m.rt/m.to,
          pft = as.factor(pft))
 
-
 forests <- c("TropRF", "TropSF", "TempRF", "TempF", "BorF")
 
 bigdf$FT <- ifelse(bigdf$vegetation == "BorF", "Boreal", ifelse(bigdf$vegetation %in% c("TempF", "TempRF"), "Temperate", ifelse(bigdf$vegetation %in% c("TropRF", "TropSF"), "Tropical", "nonF")))
