@@ -15,7 +15,6 @@ library(raster)
 library(sp)
 theme_set(theme_cowplot())
 
-
 ###get FUNGALROOT data----
 FR_occurrences <- read_csv("FR_occurrences.csv")
 FR_measurements <- read_csv("FR_measurements.csv") %>%
@@ -37,7 +36,7 @@ ERCS = c("ErM, AM", "ErM, EcM", "ErM")
 
 fungal_root$myc_group <- ifelse(fungal_root$Myc_type == "AM", "AM", ifelse(fungal_root$Myc_type == "EcM,AM", "ECM/AM", ifelse(fungal_root$Myc_type %in% ECMS, "ECM", ifelse(fungal_root$Myc_type %in% ERCS, "ERC", "Other"))))
 
-#now summarise to the speceis level: chose the myc 
+#now summarise to the speceis level: choose the most common mycorrhizal type associated with each species of plant
 fungal_root_sp <- fungal_root %>%
   group_by(order, family, genus, species, myc_group) %>%
   summarise(number= n()) %>%
@@ -49,11 +48,10 @@ fungal_root_genus <- fungal_root %>%
   summarise(number= n()) %>%
   slice_max(order_by = number, n = 1)
 
-
 #get allometry database into a dataframe & add mycorrhizal associations
 baad <- baad.data::baad_data()
 dict <- as.data.frame(baad$dictionary)
-baad_df <- as.data.frame(baad$data) %>% #Q from Ashley: What is the difference between species and speciesMatched?
+baad_df <- as.data.frame(baad$data) %>% #Q from Ashley: What is the difference between species and speciesMatched? - see dict file: it looks like it is just a checking column for comparing this to other databases. I switched ot using the regular speceis column here (I don't think it matters)  
   dplyr::select(studyName, latitude, longitude, species, vegetation, map, mat, pft, a.lf, h.t, d.bh, m.lf, m.st, m.so, m.rt, m.to, 	ma.ilf) %>%
   separate(species, c("genus", "species"), extra = "drop", fill = "right") %>%
   left_join(fungal_root_sp, by = c("genus", "species")) %>% 
@@ -67,9 +65,6 @@ baad_df <- as.data.frame(baad$data) %>% #Q from Ashley: What is the difference b
    filter( myc_group != "ERC" & myc_group != "Other" & pft != "DG")# %>%
 #   dplyr::select(studyName, pft, Temp, mat, Prec, vegetation, myc_group, h.t, m.so, m.to, m.rt, m.lf, LmSo, LmTm, LmSm, LaSm, LmLa, RmTm) 
 
-# sub <- bigdf %>%
-#   group_by(pft) %>%
-#   summarise(n_distinct(species)) 
 
 ###MAT/MAP----
 ###Need worldclim data because most of the BAAD database don't have MAT/MAP
@@ -89,7 +84,7 @@ values <- extract(r,points)
 df <- cbind.data.frame(coordinates(points),values)%>%
   rename(latitude = y, longitude = x)
 
-#sooo....what are the units of temp??
+df$Temp = df$Temp/10 #units: MAT is in deg C *10 in worldclim: this puts it into deg C. Precip is in mm
 #Also some missing values for temp/precip that maybe we should back-fill.
 
 #Now the full version of the data with baad_df, myc types, and climate:
