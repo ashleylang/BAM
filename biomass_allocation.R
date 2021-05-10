@@ -91,16 +91,24 @@ df$Temp = df$Temp/10 #units: MAT is in deg C *10 in worldclim: this puts it into
 full_df = baad_df %>% 
   left_join(df, by=c("latitude", "longitude"))
 
+
+#summarise group numbers for pfts, ecosystems, myc types
+
+sub <- full_df %>%
+  filter(RmTm>0) %>%
+  group_by(pft, myc_group, vegetation) %>%
+  summarise(n = n())
+
+
 ###Making some plots:----
   
-a <- ggplot(sub, aes(x = log(h.t), y = LmTm)) +
+ggplot(sub, aes(x = Temp, y = RmTm)) +
   geom_point(aes(color = myc_group)) +
-  geom_smooth(aes(color = myc_group)) +
-  facet_grid(.~ pft, scales = "free") +
-  labs(x = "MAT (c)", y = "Root biomass/Total biomass") +
-  theme(legend.position = "none")
+  geom_smooth(aes(color = myc_group), method = lm) +
+  facet_grid(.~ pft, scales = "free") 
+ 
 
-b <- ggplot(sub, aes(x = Prec, y = RmTm)) +
+ggplot(sub, aes(x = Prec, y = RmTm)) +
   geom_point(aes(color = myc_group)) +
   geom_smooth(aes(color = myc_group), method = "lm") +
   #facet_grid(.~ pft, scales = "free") +
