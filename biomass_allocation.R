@@ -1,5 +1,6 @@
 ##allometry of AM vs EMC trees
 ###using the BAAD dataset (Falster et al 2015 Ecology)
+##Written by Ashley Lang and Fiona Jevon
 
 #only need to do this once:
 #install.packages("devtools")
@@ -21,10 +22,14 @@ FR_measurements <- read_csv("FR_measurements.csv") %>%
   pivot_wider(names_from = measurementType, values_from = measurementValue) %>% 
   rename(Myc_type='Mycorrhiza type')
 
+#summarise Fungalroot database  to get the number of observations of different myc types for each species
 fungal_root <- left_join(FR_occurrences, FR_measurements, by = "CoreID") %>%
   dplyr::select(order, family, genus, scientificName, Myc_type) %>%
   group_by(order, family, genus, scientificName, Myc_type) %>%
   summarise(n = n())
+
+#make Myc type groupings: 
+unique(fungal_root$Myc_type)
 
 ECMS = c("EcM, AM undetermined", "EcM, no AM colonization")
 ERCS = c("ErM, AM", "ErM, EcM", "ErM")
@@ -105,7 +110,6 @@ summary(lm(RmTm ~ log(h.t) + myc_group*Prec +Temp*Prec, data = sub))
 ggplot(sub, aes(x = Temp, y = log(h.t))) +
   geom_point(aes(color = myc_group)) +
   geom_smooth(aes(color = myc_group), method = "lm") 
-
 
 c <- ggplot(sub, aes(x = log(h.t), y = LmTm)) +
   geom_point(aes(color = myc_group)) +
