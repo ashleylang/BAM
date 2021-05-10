@@ -24,8 +24,9 @@ FR_measurements <- read_csv("FR_measurements.csv") %>%
 
 #summarise Fungalroot database  to get the number of observations of different myc types for each species
 fungal_root <- left_join(FR_occurrences, FR_measurements, by = "CoreID") %>%
-  dplyr::select(order, family, genus, scientificName, Myc_type) %>%
-  group_by(order, family, genus, scientificName, Myc_type) %>%
+  dplyr::select(order, family, scientificName, Myc_type) %>%
+  separate(scientificName, c("genus", "species"), extra = "drop", fill = "right") %>%
+  group_by(order, family, genus, species, Myc_type) %>%
   summarise(n = n())
 
 #make Myc type groupings: 
@@ -34,9 +35,15 @@ unique(fungal_root$Myc_type)
 ECMS = c("EcM, AM undetermined", "EcM, no AM colonization")
 ERCS = c("ErM, AM", "ErM, EcM", "ErM")
 
-fungal_root$myc_group <- ifelse(fungal_root$Myc_type == "AM", "AM", ifelse(fungal_root$Myc_type == "ECM,AM", "ECM,AM", ifelse(fungal_root$Myc_type %in% ECMS, "ECM", ifelse(fungal_root$Myc_type %in% ERCS, "ERC", "Other"))))
+fungal_root$myc_group <- ifelse(fungal_root$Myc_type == "AM", "AM", ifelse(fungal_root$Myc_type == "EcM,AM", "ECM/AM", ifelse(fungal_root$Myc_type %in% ECMS, "ECM", ifelse(fungal_root$Myc_type %in% ERCS, "ERC", "Other"))))
 
-#create df based on FungalRoot that has the most common mycorrhizal type associated with each genus of plant
+#now summarise to the speceis level: chose the myc 
+fungal_root_sp <- fungal_root %>%
+  group_by(order, family, genus, species, myc_group) %>%
+  summarise(number= n()) %>%
+  slice_max(order_by = number, n = 1)
+
+#create df based on FungalRoot that has the most common mycorrhizal type associated with each genus of plant (to use in cases where there is no obs in Fugalroot for a speceis in BAAD)
 fungal_root_genus <- fungal_root %>%
   group_by(order, family, genus, myc_group) %>%
   summarise(number= n()) %>%
@@ -47,9 +54,9 @@ fungal_root_genus <- fungal_root %>%
 baad <- baad.data::baad_data()
 dict <- as.data.frame(baad$dictionary)
 baad_df <- as.data.frame(baad$data) %>% #Q from Ashley: What is the difference between species and speciesMatched?
-  dplyr::select(studyName, latitude, longitude, species, vegetation, map, mat, speciesMatched, pft, a.lf, h.t, d.bh, m.lf, m.st, m.so, m.rt, m.to, 	ma.ilf) %>%
-  separate(col = speciesMatched, into = c("genus", "sp"), sep = " ") %>% 
-  left_join(fungal_root_genus, by = "genus") %>% 
+  dplyr::select(studyName, latitude, longitude, species, vegetation, map, mat, pft, a.lf, h.t, d.bh, m.lf, m.st, m.so, m.rt, m.to, 	ma.ilf) %>%
+  separate(species, c("genus", "species"), extra = "drop", fill = "right") %>%
+  left_join(fungal_root_sp, by = c("genus", "species")) %>% 
   mutate(LmSm = m.lf/ m.st,
          LmSo = m.lf/ m.so,
          LmTm = m.lf/ m.to,
@@ -66,6 +73,8 @@ baad_df <- as.data.frame(baad$data) %>% #Q from Ashley: What is the difference b
 
 ###MAT/MAP----
 ###Need worldclim data because most of the BAAD database don't have MAT/MAP
+library(raster)
+library(sp)
 
 r <- getData("worldclim",var="bio",res=10)
 r <- r[[c(1,12)]]
