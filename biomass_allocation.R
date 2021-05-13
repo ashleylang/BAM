@@ -39,10 +39,16 @@ fungal_root$myc_group <- ifelse(fungal_root$Myc_type == "AM", "AM", ifelse(funga
 #now summarise to the speceis level: choose the most common mycorrhizal type associated with each species of plant
 fungal_root_sp <- fungal_root %>%
   group_by(order, family, genus, species, myc_group) %>%
-  summarise(number= n()) %>%
-  slice_max(order_by = number, n = 1)
+  summarise(number= sum(n)) %>%
+  slice_max(order_by = number, n = 1) %>% # need to fix ties
+  arrange(genus, species)
 
-#create df based on FungalRoot that has the most common mycorrhizal type associated with each genus of plant (to use in cases where there is no obs in Fugalroot for a speceis in BAAD)
+sum <- fungal_root_sp %>%
+  dplyr::select(-myc_group) %>%
+  distinct()
+#need to come up with a way of dealing with speceis that have ties: using genus level associations? Need to come up with defensible way to do that: check out what others have done, find best approach
+
+#create df based on FungalRoot that has the most common mycorrhizal type associated with each genus of plant 
 fungal_root_genus <- fungal_root %>%
   group_by(order, family, genus, myc_group) %>%
   summarise(number= n()) %>%
@@ -55,16 +61,15 @@ baad_df <- as.data.frame(baad$data) %>% #Q from Ashley: What is the difference b
   dplyr::select(studyName, latitude, longitude, species, vegetation, map, mat, pft, a.lf, h.t, d.bh, m.lf, m.st, m.so, m.rt, m.to, 	ma.ilf) %>%
   separate(species, c("genus", "species"), extra = "drop", fill = "right") %>%
   left_join(fungal_root_sp, by = c("genus", "species")) %>% 
-  mutate(LmSm = m.lf/ m.st,
-         LmSo = m.lf/ m.so,
-         LmTm = m.lf/ m.to,
-         LaSm = a.lf/ m.st,
-         LmLa = m.lf/ a.lf,
+  mutate(LmTm = m.lf/ m.to,
          RmTm = m.rt/m.to,
          pft = as.factor(pft)) %>% 
    filter( myc_group != "ERC" & myc_group != "Other" & pft != "DG")# %>%
 #   dplyr::select(studyName, pft, Temp, mat, Prec, vegetation, myc_group, h.t, m.so, m.to, m.rt, m.lf, LmSo, LmTm, LmSm, LaSm, LmLa, RmTm) 
-
+sum <- baad_df %>%
+  group_by(genus, species, myc_group) %>%
+  summarise(n = n()) %>%
+  arrange(genus, species)
 
 
 ###MAT/MAP----
@@ -88,26 +93,46 @@ df <- cbind.data.frame(coordinates(points),values)%>%
 df$Temp = df$Temp/10 #units: MAT is in deg C *10 in worldclim: this puts it into deg C. Precip is in mm
 #Also some missing values for temp/precip that maybe we should back-fill.
 
+###filtering----
 #Now the full version of the data with baad_df, myc types, and climate:
 full_df = baad_df %>% 
-  left_join(df, by=c("latitude", "longitude"))
+  left_join(df, by=c("latitude", "longitude")) %>%
+  filter(RmTm>0, h.t >.5, myc_group != "ECM/AM") 
+
+#check distributions
+hist(full_df$LmTm)
+hist(full_df$RmTm)
+hist(full_df$h.t)
+
+plot(full_df$LmTm~full_df$RmTm)
 
 
 #summarise group numbers for pfts, ecosystems, myc types
-
 sub <- full_df %>%
-  filter(RmTm>0) %>%
   group_by(pft, myc_group, vegetation) %>%
   summarise(n = n())
 
 
 ###Making some plots:----
   
-ggplot(sub, aes(x = Temp, y = RmTm)) +
+ggplot(full_df, aes(x = log(h.t), y = RmTm)) +
   geom_point(aes(color = myc_group)) +
-  geom_smooth(aes(color = myc_group), method = lm) +
+  geom_smooth(aes(color = myc_group), method = "gam") +
   facet_grid(.~ pft, scales = "free") 
- 
+
+
+ggplot(full_df, aes(x = Temp, y = RmTm)) +
+  geom_point(aes(color = myc_group)) +
+  geom_smooth(aes(color = myc_group), method = "lm") +
+  facet_grid(.~ pft, scales = "free") 
+
+
+
+ggplot(full_df, aes(x = myc_group, y = RmTm)) +
+geom_point(aes(color = myc_group), size=3, alpha=0.5)+
+  stat_summary(fun= mean, fun.min=mean, fun.max=mean, geom="crossbar", width=0.8, position="dodge")+
+  stat_summary(fun.data = mean_se, geom = "errorbar", width=0.3, position = position_dodge(width = 0.8))+
+  facet_grid(.~ pft, scales = "free") 
 
 ggplot(sub, aes(x = Prec, y = RmTm)) +
   geom_point(aes(color = myc_group)) +
@@ -124,11 +149,9 @@ ggplot(sub, aes(x = Temp, y = log(h.t))) +
   geom_point(aes(color = myc_group)) +
   geom_smooth(aes(color = myc_group), method = "lm") 
 
-c <- ggplot(sub, aes(x = log(h.t), y = LmTm)) +
+ggplot(sub, aes(x = Temp, y = RmTm)) +
   geom_point(aes(color = myc_group)) +
-  geom_smooth(aes(color = myc_group), method = "lm") +
-  labs(x = "Log(tree height)", y = "Leaf mass/Total mass") +
-  theme(legend.position = "none")
+  geom_smooth(aes(color = myc_group), method = "lm") 
 
 d <- ggplot(sub, aes(x = log(h.t), y = RmTm)) +
   geom_point(aes(color = myc_group)) +
@@ -138,4 +161,18 @@ d <- ggplot(sub, aes(x = log(h.t), y = RmTm)) +
 
 plot_grid(c,d, nrow = 1)
 
+####models-----
+#make LMMS
+#make separate models for each pft
+#temperature not interactive
+#standardize the continuous variables
+#use ggeffects to pull out effect of myc type
+summary(lmer(RmTm~log(h.t)*myc_group + Temp, data = subset(full_df, pft == "EA")))
 
+summary(lm(RmTm~log(h.t)*myc_group + Temp, data = subset(full_df, pft == "DA")))
+
+summary(lm(RmTm~log(h.t)*myc_group + Temp, data = subset(full_df, pft == "EG")))
+
+
+summary(lm(Temp~pft*myc_group, data = full_df))
+TukeyHSD(a)
