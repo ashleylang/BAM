@@ -11,8 +11,8 @@
 library(baad.data)
 library(tidyverse)
 library(cowplot)
-library(raster)
 library(sp)
+library(raster)
 library(corrplot)
 theme_set(theme_cowplot())
 
@@ -63,15 +63,17 @@ duplicates= fungal_root_sp %>%
 #get allometry database into a dataframe & add mycorrhizal associations
 baad <- baad.data::baad_data()
 dict <- as.data.frame(baad$dictionary)
-baad_df <- as.data.frame(baad$data) %>% #Q from Ashley: What is the difference between species and speciesMatched? - see dict file: it looks like it is just a checking column for comparing this to other databases. I switched ot using the regular speceis column here (I don't think it matters)  
+baad_df <- as.data.frame(baad$data) %>% #Q from Ashley: What is the difference between species and speciesMatched? - see dict file: it looks like it is just a checking column for comparing this to other databases. I switched to using the regular species column here (I don't think it matters)  
   dplyr::select(studyName, latitude, longitude, species, vegetation, map, mat, pft, a.lf, h.t, d.bh, m.lf, m.st, m.so, m.rt, m.to, 	ma.ilf) %>%
   separate(species, c("genus", "species"), extra = "drop", fill = "right") %>%
   left_join(fungal_root_sp, by = c("genus", "species")) %>% 
   mutate(LmTm = m.lf/ m.to,
          RmTm = m.rt/m.to,
+         LMRM = m.lf/m.rt,
          pft = as.factor(pft)) %>% 
    filter( myc_group != "ERC" & myc_group != "Other" & pft != "DG")# %>%
 #   dplyr::select(studyName, pft, Temp, mat, Prec, vegetation, myc_group, h.t, m.so, m.to, m.rt, m.lf, LmSo, LmTm, LmSm, LaSm, LmLa, RmTm) 
+
 sum <- baad_df %>%
   group_by(genus, species, myc_group) %>%
   summarise(n = n()) %>%
@@ -84,7 +86,7 @@ r <- getData("worldclim",var="bio",res=10)
 r <- r[[c(1,12)]]
 names(r) <- c("Temp","Prec")
 
-coords <- data.frame(x=baad_df$longitude, y=baad_df$latitude) %>% 
+coords <- data.frame(x=baad_df$longitude, y=baad_df$latitude) %>%
   na.omit() %>%
   distinct()
 
@@ -106,8 +108,8 @@ full_df = baad_df %>%
 #check distributions
 hist(full_df$LmTm)
 hist(full_df$RmTm)
-hist(full_df$h.t)
-
+hist(full_df$LMRM)#this needs to be log transformed
+hist(full_df$h.t) #this needs to be log transformed
 plot(full_df$LmTm~full_df$RmTm)
 
 
@@ -118,7 +120,6 @@ sub <- full_df %>%
 
 
 ###Making some plots:----
-  
 ggplot(full_df, aes(x = log(h.t), y = RmTm)) +
   geom_point(aes(color = myc_group)) +
   geom_smooth(aes(color = myc_group), method = "gam") +
@@ -129,7 +130,6 @@ ggplot(full_df, aes(x = Temp, y = RmTm)) +
   geom_point(aes(color = myc_group)) +
   geom_smooth(aes(color = myc_group), method = "lm") +
   facet_grid(.~ pft, scales = "free") 
-
 
 
 ggplot(full_df, aes(x = myc_group, y = RmTm)) +
@@ -167,12 +167,13 @@ plot_grid(c,d, nrow = 1)
 
 #Any strong correlations between continuous variables?
 full_df_cor=full_df %>% 
-  dplyr::select(Temp, Prec, LmTm, RmTm, h.t) %>% 
+  mutate(log_ht = log(h.t))%>%
+  dplyr::select(Temp, Prec, LmTm, RmTm, log_ht) %>% 
   drop_na()
 
-corrplot(cor(full_df_cor), method="circle", type="upper")
-#Positive correlation with height and LmTm, height and LmRm (bigger trees have more leaves *and* roots relative to trunk)
-#Negative corr. between Precip and Temp and LmTm and Temp (leaf mass is a smaller component of total mass in hotter places-- & here hotter also seems to mean drier but less strong corr. with precip)
+corrplot(cor(full_df_cor), method="number", type="upper")
+#Negative correlation with height and LmTm, height and RmTm (smaller trees have more leaves *and* roots relative to trunk)
+#Positive corr. between Precip and Temp and LmTm and Temp (leaf mass is a larger component of total mass in hotter places-- & here hotter also seems to mean wetter but less strong corr. with precip)
 
 ####models-----
 #make LMMS
@@ -180,12 +181,47 @@ corrplot(cor(full_df_cor), method="circle", type="upper")
 #temperature not interactive
 #standardize the continuous variables
 #use ggeffects to pull out effect of myc type
-summary(lmer(RmTm~log(h.t)*myc_group + Temp, data = subset(full_df, pft == "EA")))
+library(lme4)
+library(lmerTest)
+library(sjPlot)
+library(ggeffects)
+library(cowplot)
+library(arm)
+library(MuMIn)
 
-summary(lm(RmTm~log(h.t)*myc_group + Temp, data = subset(full_df, pft == "DA")))
+##root mass/total mass models
+R_EA_m1 <-lmer(RmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EA"))
+summary(R_EA_m1)
+r.squaredGLMM(R_EA_m1)
+tab_model(R_EA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
-summary(lm(RmTm~log(h.t)*myc_group + Temp, data = subset(full_df, pft == "EG")))
+R_DA_m1 <-lmer(RmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "DA"))
+summary(R_DA_m1)
+r.squaredGLMM(R_DA_m1)
+tab_model(R_DA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+
+R_EG_m1 <-lmer(RmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EG"))
+summary(R_EG_m1)
+r.squaredGLMM(R_EG_m1)
+tab_model(R_EG_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+
+##leaf mass/total mass models
+L_EA_m1 <-lmer(LmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EA"))
+tab_model(L_EA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+
+L_DA_m1 <-lmer(LmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "DA"))
+tab_model(L_DA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+
+L_EG_m1 <-lmer(LmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EG"))
+tab_model(L_EG_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 
-summary(lm(Temp~pft*myc_group, data = full_df))
-TukeyHSD(a)
+#Leaf:root models
+B_EA_m1 <-lmer(log(LMRM)~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EA"))
+tab_model(B_EA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+
+B_DA_m1 <-lmer(log(LMRM)~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "DA"))
+tab_model(B_DA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+
+B_EG_m1 <-lmer(log(LMRM)~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EG"))
+tab_model(B_EG_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
