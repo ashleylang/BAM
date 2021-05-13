@@ -13,6 +13,7 @@ library(tidyverse)
 library(cowplot)
 library(raster)
 library(sp)
+library(corrplot)
 theme_set(theme_cowplot())
 
 ###get FUNGALROOT data----
@@ -163,6 +164,15 @@ d <- ggplot(sub, aes(x = log(h.t), y = RmTm)) +
   theme(legend.position = "none")
 
 plot_grid(c,d, nrow = 1)
+
+#Any strong correlations between continuous variables?
+full_df_cor=full_df %>% 
+  dplyr::select(Temp, Prec, LmTm, RmTm, h.t) %>% 
+  drop_na()
+
+corrplot(cor(full_df_cor), method="circle", type="upper")
+#Positive correlation with height and LmTm, height and LmRm (bigger trees have more leaves *and* roots relative to trunk)
+#Negative corr. between Precip and Temp and LmTm and Temp (leaf mass is a smaller component of total mass in hotter places-- & here hotter also seems to mean drier but less strong corr. with precip)
 
 ####models-----
 #make LMMS
