@@ -125,53 +125,20 @@ ggplot(full_df, aes(x = log(h.t), y = RmTm)) +
   geom_smooth(aes(color = myc_group), method = "gam") +
   facet_grid(.~ pft, scales = "free") 
 
-
-ggplot(full_df, aes(x = Temp, y = RmTm)) +
-  geom_point(aes(color = myc_group)) +
-  geom_smooth(aes(color = myc_group), method = "lm") +
-  facet_grid(.~ pft, scales = "free") 
-
-
 ggplot(full_df, aes(x = myc_group, y = RmTm)) +
 geom_point(aes(color = myc_group), size=3, alpha=0.5)+
   stat_summary(fun= mean, fun.min=mean, fun.max=mean, geom="crossbar", width=0.8, position="dodge")+
   stat_summary(fun.data = mean_se, geom = "errorbar", width=0.3, position = position_dodge(width = 0.8))+
   facet_grid(.~ pft, scales = "free") 
 
-ggplot(sub, aes(x = Prec, y = RmTm)) +
-  geom_point(aes(color = myc_group)) +
-  geom_smooth(aes(color = myc_group), method = "lm") +
-  #facet_grid(.~ pft, scales = "free") +
-  labs(x = "MAP (mm)", y = "Root biomass/Total biomass") +
-  theme(legend.position = "none")
-
-plot_grid(a, b, nrow = 1)
-
-summary(lm(RmTm ~ log(h.t) + myc_group*Prec +Temp*Prec, data = sub))
-
-ggplot(sub, aes(x = Temp, y = log(h.t))) +
-  geom_point(aes(color = myc_group)) +
-  geom_smooth(aes(color = myc_group), method = "lm") 
-
-ggplot(sub, aes(x = Temp, y = RmTm)) +
-  geom_point(aes(color = myc_group)) +
-  geom_smooth(aes(color = myc_group), method = "lm") 
-
-d <- ggplot(sub, aes(x = log(h.t), y = RmTm)) +
-  geom_point(aes(color = myc_group)) +
-  geom_smooth(aes(color = myc_group), method = "lm") +
-  labs(x = "Log(tree height)", y = "Root mass/Total mass") +
-  theme(legend.position = "none")
-
-plot_grid(c,d, nrow = 1)
-
 #Any strong correlations between continuous variables?
 full_df_cor=full_df %>% 
-  mutate(log_ht = log(h.t))%>%
-  dplyr::select(Temp, Prec, LmTm, RmTm, log_ht) %>% 
+  mutate(log_ht = log(h.t),
+         log_LMRM = log(LMRM))%>%
+  dplyr::select(Temp, Prec, LmTm, RmTm,  log_LMRM, log_ht) %>% 
   drop_na()
 
-corrplot(cor(full_df_cor), method="number", type="upper")
+corrplot::corrplot(cor(full_df_cor), method="number", type="upper")
 #Negative correlation with height and LmTm, height and RmTm (smaller trees have more leaves *and* roots relative to trunk)
 #Positive corr. between Precip and Temp and LmTm and Temp (leaf mass is a larger component of total mass in hotter places-- & here hotter also seems to mean wetter but less strong corr. with precip)
 
@@ -194,34 +161,48 @@ R_EA_m1 <-lmer(RmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subs
 summary(R_EA_m1)
 r.squaredGLMM(R_EA_m1)
 tab_model(R_EA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+#use ggpredict to plot just the effects of myc group (basically removing height)
+plot(ggpredict(R_EA_m1, terms = c("Temp", "myc_group")))
+ggplot(data = subset(full_df, pft == "EA"), aes(x = Temp, y = RmTm)) + geom_point(aes(color = myc_group))
+#use ggpredict to plot just the effects of myc group (remove Temp and height)
+plot(ggpredict(R_EA_m1, terms = c("myc_group")))
+ggplot(data = subset(full_df, pft == "EA"), aes(x = myc_group, y = RmTm)) + geom_boxplot(aes(color = myc_group))
 
 R_DA_m1 <-lmer(RmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "DA"))
 summary(R_DA_m1)
 r.squaredGLMM(R_DA_m1)
 tab_model(R_DA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+plot(ggpredict(R_DA_m1, terms = c("Temp", "myc_group")))
 
 R_EG_m1 <-lmer(RmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EG"))
 summary(R_EG_m1)
 r.squaredGLMM(R_EG_m1)
 tab_model(R_EG_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+plot(ggpredict(R_EG_m1, terms = c("Temp", "myc_group")))
 
 ##leaf mass/total mass models
 L_EA_m1 <-lmer(LmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EA"))
 tab_model(L_EA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+plot(ggpredict(L_EA_m1, terms = c("Temp", "myc_group")))
 
 L_DA_m1 <-lmer(LmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "DA"))
 tab_model(L_DA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+plot(ggpredict(L_DA_m1, terms = c("Temp", "myc_group")))
 
 L_EG_m1 <-lmer(LmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EG"))
 tab_model(L_EG_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-
+plot(ggpredict(L_EG_m1, terms = c("Temp", "myc_group")))
 
 #Leaf:root models
 B_EA_m1 <-lmer(log(LMRM)~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EA"))
 tab_model(B_EA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+plot(ggpredict(B_EA_m1, terms = c("Temp", "myc_group")))
+
 
 B_DA_m1 <-lmer(log(LMRM)~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "DA"))
 tab_model(B_DA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+plot(ggpredict(B_DA_m1, terms = c("Temp", "myc_group")))
 
 B_EG_m1 <-lmer(log(LMRM)~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EG"))
 tab_model(B_EG_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+plot(ggpredict(B_EG_m1, terms = c("Temp", "myc_group")))
