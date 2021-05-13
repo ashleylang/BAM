@@ -66,6 +66,7 @@ baad_df <- as.data.frame(baad$data) %>% #Q from Ashley: What is the difference b
 #   dplyr::select(studyName, pft, Temp, mat, Prec, vegetation, myc_group, h.t, m.so, m.to, m.rt, m.lf, LmSo, LmTm, LmSm, LaSm, LmLa, RmTm) 
 
 
+
 ###MAT/MAP----
 ###Need worldclim data because most of the BAAD database don't have MAT/MAP
 library(raster)
