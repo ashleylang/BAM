@@ -41,18 +41,23 @@ fungal_root_sp <- fungal_root %>%
   group_by(order, family, genus, species, myc_group) %>%
   summarise(number= sum(n)) %>%
   slice_max(order_by = number, n = 1) %>% # need to fix ties
-  arrange(genus, species)
+  arrange(genus, species) %>% 
+  filter(myc_group != "ECM/AM" & myc_group != "Other" & myc_group != "ERC") %>% 
+  group_by(order, family, genus, species) %>% 
+  mutate(dupe = n()>1) %>% 
+  filter(dupe==F)
 
-sum <- fungal_root_sp %>%
-  dplyr::select(-myc_group) %>%
-  distinct()
-#need to come up with a way of dealing with speceis that have ties: using genus level associations? Need to come up with defensible way to do that: check out what others have done, find best approach
+duplicates= fungal_root_sp %>% 
+  filter(dupe==TRUE)#Now we have 83 species with equal #s of AM and ECM observations
+#need to come up with a way of dealing with speceis that have ties: using genus level associations?
+#Problem with using Genus level associations: many are from genera with mixtures of AM and ECM species or dual symbionts
+#My thought is...treat them how we're treating dual symbionts (remove from data set). I have done this above with the last filter in that pipe for fungal_root_sp
 
 #create df based on FungalRoot that has the most common mycorrhizal type associated with each genus of plant 
-fungal_root_genus <- fungal_root %>%
-  group_by(order, family, genus, myc_group) %>%
-  summarise(number= n()) %>%
-  slice_max(order_by = number, n = 1)
+# fungal_root_genus <- fungal_root %>%
+#   group_by(order, family, genus, myc_group) %>%
+#   summarise(number= n()) %>%
+#   slice_max(order_by = number, n = 1)
 
 #get allometry database into a dataframe & add mycorrhizal associations
 baad <- baad.data::baad_data()
@@ -74,9 +79,6 @@ sum <- baad_df %>%
 
 ###MAT/MAP----
 ###Need worldclim data because most of the BAAD database don't have MAT/MAP
-library(raster)
-library(sp)
-
 r <- getData("worldclim",var="bio",res=10)
 r <- r[[c(1,12)]]
 names(r) <- c("Temp","Prec")
@@ -88,16 +90,17 @@ coords <- data.frame(x=baad_df$longitude, y=baad_df$latitude) %>%
 points <- SpatialPoints(coords, proj4string = r@crs)
 values <- extract(r,points)
 df <- cbind.data.frame(coordinates(points),values)%>%
-  rename(latitude = y, longitude = x)
+  rename(latitude = y, longitude = x) %>% 
+  mutate(Temp=Temp/10)#units: MAT is now in deg C. Precip is in mm
 
-df$Temp = df$Temp/10 #units: MAT is in deg C *10 in worldclim: this puts it into deg C. Precip is in mm
 #Also some missing values for temp/precip that maybe we should back-fill.
 
 ###filtering----
 #Now the full version of the data with baad_df, myc types, and climate:
 full_df = baad_df %>% 
   left_join(df, by=c("latitude", "longitude")) %>%
-  filter(RmTm>0, h.t >.5, myc_group != "ECM/AM") 
+  filter(RmTm>0, h.t >.5, myc_group != "ECM/AM") %>% 
+  unite(study_species, studyName, genus, species, sep="_", remove=F)
 
 #check distributions
 hist(full_df$LmTm)
