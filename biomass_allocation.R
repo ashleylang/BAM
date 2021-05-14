@@ -113,7 +113,10 @@ full_df = baad_df %>%
   mutate(log_ht = log(h.t),
          log_LMRM = log(LMRM),
          leaf_habit= case_when(pft=="EA" | pft== "EG" ~ "evergreen",
-                               pft=="DA" ~ "deciduous") )
+                               pft=="DA" ~ "deciduous"),
+         evo_group= case_when(pft=="EA" ~ "angiosperm",
+                              pft== "EG" ~ "gymnosperm",
+                              pft=="DA" ~ "angiosperm") )
 
 #check distributions
 hist(full_df$LmTm)
@@ -159,7 +162,7 @@ corrplot::corrplot(cor(full_df_cor), method="number", type="upper")
 
 ##root mass/total mass models
 #Evergreen Angiosperms
-R_EA_m1 <-lmer(RmTm~log_ht + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EA"))
+R_EA_m1 <-lmer(RmTm~log_ht + myc_group + Temp + leaf_habit+ (1|study_species), data = full_df)
 summary(R_EA_m1)
 r.squaredGLMM(R_EA_m1)
 tab_model(R_EA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
