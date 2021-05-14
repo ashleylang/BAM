@@ -160,76 +160,34 @@ corrplot::corrplot(cor(full_df_cor), method="number", type="upper")
 #standardize the continuous variables
 #use ggeffects to pull out effect of myc type
 
-##root mass/total mass models
-#Evergreen Angiosperms
-R_EA_m1 <-lmer(RmTm~log_ht + myc_group + Temp + leaf_habit+ (1|study_species), data = full_df)
-summary(R_EA_m1)
-r.squaredGLMM(R_EA_m1)
-tab_model(R_EA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+##Root mass/total mass model
+R_m1 <-lmer(RmTm~log_ht + myc_group + Temp + leaf_habit +(1|study_species), data = full_df)
+summary(R_m1)
+r.squaredGLMM(R_m1)
+tab_model(R_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #use ggpredict to plot just the effects of myc group (basically removing height)
-plot(ggpredict(R_EA_m1, terms = c("Temp", "myc_group")))
+plot(ggpredict(R_m1, terms = c("Temp", "myc_group")))
 ggplot(data = subset(full_df, pft == "EA"), aes(x = Temp, y = RmTm)) + geom_point(aes(color = myc_group))
 
 #use ggpredict to plot just the effects of myc group (basically removing temp)
-plot(ggpredict(R_EA_m1, terms = c("log_ht", "myc_group")))
+plot(ggpredict(R_m1, terms = c("log_ht", "myc_group")))
 ggplot(data = subset(full_df, pft == "EA"), aes(x = log_ht, y = RmTm)) + geom_point(aes(color = myc_group))
 
 #use ggpredict to plot just the effects of myc group (remove Temp and height)
-plot(ggpredict(R_EA_m1, terms = c("myc_group")))
+plot(ggpredict(R_m1, terms = c("myc_group")))
 ggplot(data = subset(full_df, pft == "EA"), aes(x = myc_group, y = RmTm)) + geom_boxplot(aes(color = myc_group))
 
+##Leaf mass/total mass models
+L_m1 <-lmer(LmTm~log(h.t) + myc_group + Temp + leaf_habit + (1|study_species), data = full_df)
+summary(L_m1)
+tab_model(L_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+plot(ggpredict(L_m1, terms = c("Temp", "myc_group")))
 
-#Deciduous Angiosperms
-R_DA_m1 <-lmer(RmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "DA"))
-summary(R_DA_m1)
-r.squaredGLMM(R_DA_m1)
-tab_model(R_DA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-
-#use ggpredict to plot just the effects of myc group (basically removing height)
-plot(ggpredict(R_DA_m1, terms = c("Temp", "myc_group")))
-ggplot(data = subset(full_df, pft == "DA"), aes(x = Temp, y = RmTm)) + geom_point(aes(color = myc_group))
-
-#use ggpredict to plot just the effects of myc group (remove Temp and height)
-plot(ggpredict(R_DA_m1, terms = c("myc_group")))
-
-#Evergreen Gymnosperms
-R_EG_m1 <-lmer(RmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EG"))
-summary(R_EG_m1)
-r.squaredGLMM(R_EG_m1)
-tab_model(R_EG_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-
-#use ggpredict to plot just the effects of myc group (basically removing height)
-plot(ggpredict(R_EG_m1, terms = c("Temp", "myc_group")))
-ggplot(data = subset(full_df, pft == "EG"), aes(x = Temp, y = RmTm)) + geom_point(aes(color = myc_group))
-
-#use ggpredict to plot just the effects of myc group (remove Temp and height)
-plot(ggpredict(R_EG_m1, terms = c("myc_group")))
+#Leaf:root model
+B_m1 <-lmer(log(LMRM)~log(h.t) + myc_group + Temp + leaf_habit + (1|study_species), data = full_df)
+summary(B_m1)
+tab_model(B_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+plot(ggpredict(B_m1, terms = c("Temp", "myc_group")))
 
 
-##leaf mass/total mass models
-L_EA_m1 <-lmer(LmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EA"))
-tab_model(L_EA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-plot(ggpredict(L_EA_m1, terms = c("Temp", "myc_group")))
-
-L_DA_m1 <-lmer(LmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "DA"))
-tab_model(L_DA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-plot(ggpredict(L_DA_m1, terms = c("Temp", "myc_group")))
-
-L_EG_m1 <-lmer(LmTm~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EG"))
-tab_model(L_EG_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-plot(ggpredict(L_EG_m1, terms = c("Temp", "myc_group")))
-
-#Leaf:root models
-B_EA_m1 <-lmer(log(LMRM)~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EA"))
-tab_model(B_EA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-plot(ggpredict(B_EA_m1, terms = c("Temp", "myc_group")))
-
-
-B_DA_m1 <-lmer(log(LMRM)~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "DA"))
-tab_model(B_DA_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-plot(ggpredict(B_DA_m1, terms = c("Temp", "myc_group")))
-
-B_EG_m1 <-lmer(log(LMRM)~log(h.t) + myc_group + Temp + (1|study_species), data = subset(full_df, pft == "EG"))
-tab_model(B_EG_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-plot(ggpredict(B_EG_m1, terms = c("Temp", "myc_group")))
