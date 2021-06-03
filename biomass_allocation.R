@@ -238,29 +238,34 @@ B_E1 <- ggeffect(B_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type =
 a <- ggplot() +
   geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
   geom_line(data = R_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
-  scale_colour_manual(name="Mycorrhizal\nType", values=AM_ECM)+
+  scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
   #  theme(legend.position = c(.65, .75), legend.title= element_text(hjust=0.5))+
   theme(legend.position = c(.45, .55), legend.title= element_text(hjust=0.5))+
-  labs(x= "ln(Height)", y="Root mass / Total mass" )
+  labs(x= "ln(Height)", y="Root mass / Total mass" )+
+  guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
 
 #plot the marginal effects and the raw data for Lm/Tm
 b <- ggplot() +
   geom_point(data = full_df, aes(x = log_ht, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
   geom_line(data = L_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
-  scale_colour_manual(name="Mycorrhizal\nType", values=AM_ECM)+
+  scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
   theme(legend.position = "none")+
-  labs(x= "ln(Height)", y="Leaf mass / Total mass" )
+  labs(x= "ln(Height)", y="Leaf mass / Total mass" )+
+  guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
+  
 
 #plot the marginal effects and the raw data for Lm/Rm
 c <- ggplot() +
   geom_point(data = full_df, aes(x = log_ht, y = log_LMRM, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
   geom_line(data = B_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
-  scale_colour_manual(name="Mycorrhizal\nType", values=AM_ECM)+
+  scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
   theme(legend.position = "none", axis.title.y=element_text(size=12.5))+
-  labs(x= "ln(Height)", y="ln(Leaf mass / Root mass)" )
+  labs(x= "ln(Height)", y="ln(Leaf mass / Root mass)" )+
+  guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
+  
 
 #cowplot::plot_grid(a, b, c, nrow = 1, labels="auto")
 
@@ -268,4 +273,4 @@ c <- ggplot() +
 leg=get_legend(a)
 a=a+theme(legend.position="none")
 ggarrange(a, b, c, leg, labels=c("a", "b", "c", " "), nrow=2, ncol=2)
-ggsave("Figure_2.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=160,width=180, units="mm")
+#ggsave("Figure_2.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=160,width=180, units="mm")
