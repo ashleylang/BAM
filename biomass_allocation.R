@@ -160,7 +160,7 @@ geo_space
 #use ggeffects to pull out effect of myc type
 
 ##Root mass/total mass model
-R_full_model <-lmer(RmTm~log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec  + (1|study_species), data = full_df)
+R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
 vif(R_full_model)
 summary(R_full_model)
 tab_model(R_full_model, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
