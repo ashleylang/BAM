@@ -129,8 +129,8 @@ plot(full_df$LmTm~full_df$RmTm)
 
 #summarise group numbers for pfts, ecosystems, myc types
 sub <- full_df %>%
-  group_by(pft, myc_group, vegetation) %>%
-  summarise(n = n())
+  group_by(Temp, Prec, myc_group, leaf_habit) %>%
+  summarise(n=n())
 
 
 ###Making some plots:----
@@ -147,19 +147,21 @@ corrplot::corrplot(cor(full_df_cor), method="number", type="upper")
 # plot myc group on climate space- check for confounding? 
 # Color of myc type, shape for leaf habit, plotted on MAP/MAT
 
-clim_space=ggplot(full_df,aes(x= Temp, y=Prec))+
-  geom_point(aes(shape=leaf_habit, colour=myc_group), size=4)+
-  scale_colour_manual(name="Mycorrhizal\nType", values=c("#B1D0BA", "#5A6A5F"))+
+clim_space=ggplot(sub,aes(x= Temp, y=Prec))+
+  geom_point(aes(shape=leaf_habit, colour=myc_group, size=n), alpha=0.8)+
+  scale_colour_manual(name="Mycorrhizal\nType", values=c('#CCBB44', '#114C3A'))+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
   labs(x=expression("Mean Annual Temperature ("*degree*C*")"), y="Mean Annual Precipitation (mm)")+
-  theme(legend.title=element_text(hjust = 0.5))
+  theme(legend.title=element_text(hjust = 0.5))+
+  guides(color = guide_legend(override.aes = list(size=5)), shape = guide_legend(override.aes = list(size=5)))+
+  scale_size(range = c(2,6))
 clim_space
 #ggsave("Figure_1_climate.pdf", path="~/BAM", width= 88, height= 180, units="mm")
 #^ Was trying to figure out how to save this to our GitHub repository; failed
 
 geo_space=ggplot(full_df,aes(x= longitude, y=latitude))+
   geom_point(aes(shape=leaf_habit, colour=myc_group), size=3)+
-  scale_colour_manual(name="Mycorrhizal\nType", values=c("#B1D0BA", "#5A6A5F"))+
+  scale_colour_manual(name="Mycorrhizal\nType", values=c('#CCBB44', '#114C3A'))+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
   labs(x="Longitude", y="Latitude")+
   theme(legend.title=element_text(hjust = 0.5))
@@ -189,10 +191,12 @@ R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht", "myc_group"), type = "random"
 a <- ggplot() +
   geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .4, size=3) +
   geom_line(data = R_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
-  scale_colour_manual(name="Mycorrhizal\nType", values=c("#B1D0BA", "#5A6A5F"))+
+  scale_colour_manual(name="Mycorrhizal\nType", values=c('#CCBB44', '#114C3A'))+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
-  theme(legend.position = c(.65, .75))
+  theme(legend.position = c(.65, .75), legend.title= element_text(hjust=0.5))+
+  labs(x= "ln(Height)", y="Root mass / Total mass" )
 a
+
 ##Leaf mass/total mass models
 #full model (all terms and interactions)
 L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
