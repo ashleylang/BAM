@@ -157,10 +157,20 @@ corrplot::corrplot(cor(full_df_cor), method="number", type="upper")
 # Color of myc type, shape for leaf habit, plotted on MAP/MAT
 
 clim_space=ggplot(full_df,aes(x= Temp, y=Prec))+
-  geom_point(aes(shape=leaf_habit, colour=myc_group))
-
+  geom_point(aes(shape=leaf_habit, colour=myc_group), size=4)+
+  scale_colour_manual(name="Mycorrhizal\nType", values=c("#B1D0BA", "#5A6A5F"))+
+  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
+  labs(x=expression("Mean Annual Temperature ("*degree*C*")"), y="Mean Annual Precipitation (mm)")+
+  theme(legend.title=element_text(hjust = 0.5))
+clim_space
+#ggsave("Figure_1_climate.pdf", path="~/BAM", width= 88, height= 180, units="mm")
+#^ Was trying to figure out how to save this to our GitHub repository; failed
 geo_space=ggplot(full_df,aes(x= longitude, y=latitude))+
-  geom_point(aes(shape=leaf_habit, colour=myc_group))
+  geom_point(aes(shape=leaf_habit, colour=myc_group), size=3)+
+  scale_colour_manual(name="Mycorrhizal\nType", values=c("#B1D0BA", "#5A6A5F"))+
+  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
+  labs(x="Longitude", y="Latitude")+
+  theme(legend.title=element_text(hjust = 0.5))
 geo_space
 
 ####models-----
