@@ -183,7 +183,8 @@ summary(R_reduced_m1)
 tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #use ggeffect to calculate the marginal effects of myc group and height 
-R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht", "myc_group"), type = "random")
+R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random", )
+
 
 #plot the marginal effects and the raw data
 a <- ggplot() +
@@ -206,14 +207,16 @@ summary(L_reduced_m1)
 tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #use ggeffect to calculate the marginal effects of myc group and height 
-L_E1 <- ggeffect(L_reduced_m1, terms = c("log_ht", "myc_group"), type = "random")
+L_E1 <- ggeffect(L_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 
 #plot the marginal effects and the raw data
 b <- ggplot() +
-  geom_point(data = full_df, aes(x = log_ht, y = LmTm, color = myc_group), alpha = .3) +
+  geom_point(data = full_df, aes(x = log_ht, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .4, size=3) +
   geom_line(data = L_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  scale_colour_manual(name="Mycorrhizal\nType", values=c("#B1D0BA", "#5A6A5F"))+
+  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
   theme(legend.position = "none")
-
+b
 
 #Leaf:root full model
 B_full_model <-lmer(log_LMRM ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
@@ -228,12 +231,15 @@ summary(B_reduced_m1)
 tab_model(B_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #use ggeffect to calculate the marginal effects of myc group and height 
-B_E1 <- ggeffect(B_reduced_m1, terms = c("log_ht", "myc_group"), type = "random")
+B_E1 <- ggeffect(B_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 
 #plot the marginal effects and the raw data
 c <- ggplot() +
-  geom_point(data = full_df, aes(x = log_ht, y = log_LMRM, color = myc_group), alpha = .3) +
+  geom_point(data = full_df, aes(x = log_ht, y = log_LMRM, color = myc_group, shape=leaf_habit), alpha = .4, size=3) +
   geom_line(data = B_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  scale_colour_manual(name="Mycorrhizal\nType", values=c("#B1D0BA", "#5A6A5F"))+
+  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
   theme(legend.position = "none")
+c
 
 cowplot::plot_grid(a, b, c, nrow = 1, labels="auto")
