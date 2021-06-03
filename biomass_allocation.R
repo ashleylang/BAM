@@ -153,6 +153,16 @@ corrplot::corrplot(cor(full_df_cor), method="number", type="upper")
 #Negative correlation with height and LmTm, height and RmTm (smaller trees have more leaves *and* roots relative to trunk)
 #Positive corr. between Precip and Temp and LmTm and Temp (leaf mass is a larger component of total mass in hotter places-- & here hotter also seems to mean wetter but less strong corr. with precip)
 
+# plot myc group on climate space- check for confounding? 
+# Color of myc type, shape for leaf habit, plotted on MAP/MAT
+
+clim_space=ggplot(full_df,aes(x= Temp, y=Prec))+
+  geom_point(aes(shape=leaf_habit, colour=myc_group))
+
+geo_space=ggplot(full_df,aes(x= longitude, y=latitude))+
+  geom_point(aes(shape=leaf_habit, colour=myc_group))
+geo_space
+
 ####models-----
 #make LMMS
 #make separate models for each pft
@@ -161,7 +171,7 @@ corrplot::corrplot(cor(full_df_cor), method="number", type="upper")
 #use ggeffects to pull out effect of myc type
 
 ##Root mass/total mass model
-R_m1 <-lmer(RmTm~log_ht + myc_group + Temp + leaf_habit +(1|study_species), data = full_df)
+R_m1 <-lmer(RmTm~log_ht + myc_group + Temp + Prec + leaf_habit +(1|study_species), data = full_df)
 summary(R_m1)
 r.squaredGLMM(R_m1)
 tab_model(R_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
