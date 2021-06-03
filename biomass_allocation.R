@@ -20,6 +20,7 @@ library(sjPlot)
 library(ggeffects)
 library(arm)
 library(MuMIn)
+library(car)
 theme_set(theme_cowplot())
 
 ###get FUNGALROOT data----
@@ -133,16 +134,6 @@ sub <- full_df %>%
 
 
 ###Making some plots:----
-ggplot(full_df, aes(x = log(h.t), y = RmTm)) +
-  geom_point(aes(color = myc_group)) +
-  geom_smooth(aes(color = myc_group), method = "gam") +
-  facet_grid(.~ pft, scales = "free") 
-
-ggplot(full_df, aes(x = myc_group, y = RmTm)) +
-geom_point(aes(color = myc_group), size=3, alpha=0.5)+
-  stat_summary(fun= mean, fun.min=mean, fun.max=mean, geom="crossbar", width=0.8, position="dodge")+
-  stat_summary(fun.data = mean_se, geom = "errorbar", width=0.3, position = position_dodge(width = 0.8))+
-  facet_grid(.~ pft, scales = "free") 
 
 #Any strong correlations between continuous variables?
 full_df_cor=full_df %>% 
@@ -165,38 +156,71 @@ geo_space
 
 ####models-----
 #make LMMS
-#make separate models for each pft
-#temperature not interactive
-#standardize the continuous variables
+#run models with standardized and unstandardized coefficients
 #use ggeffects to pull out effect of myc type
 
 ##Root mass/total mass model
-R_m1 <-lmer(RmTm~log_ht + myc_group + Temp + Prec + leaf_habit +(1|study_species), data = full_df)
-summary(R_m1)
-r.squaredGLMM(R_m1)
-tab_model(R_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+R_full_model <-lmer(RmTm~log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec  + (1|study_species), data = full_df)
+vif(R_full_model)
+summary(R_full_model)
+tab_model(R_full_model, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
-R_m3 <- lmer(RmTm~ myc_group + leaf_habit*log_ht + Temp + Prec + (1|study_species), data = full_df)
-summary(R_m3)
+#remove insignificant interaction terms: log_ht*myc_group, Temp*myc_group, log_ht*Temp, Temp*leaf_habit (marginally significant)
+R_reduced_m1 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  + (1|study_species), data = full_df)
+vif(R_reduced_m1)
+summary(R_reduced_m1)
+tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #use ggeffect to calculate the marginal effects of myc group and height 
-R_m1_E1 <- ggeffect(R_m1, terms = c("log_ht", "myc_group"), add.data = TRUE)
+R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht", "myc_group"), type = "random")
 
-
-#use ggpredict to plot just the effects of myc group (remove Temp and height)
-plot(ggeffect(R_m1, terms = c("myc_group")), add.data = TRUE)
+#plot the marginal effects and the raw data
+a <- ggplot() +
+  geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group), alpha = .3) +
+  geom_line(data = R_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  theme(legend.position = c(.65, .75))
 
 ##Leaf mass/total mass models
-L_m1 <-lmer(LmTm~log_ht + myc_group + Temp + leaf_habit + (1|study_species), data = full_df)
-summary(L_m1)
-tab_model(L_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-plot(ggeffect(L_m1, terms = c("log_ht", "myc_group"), type = "random"), add.data = TRUE)
+#full model (all terms and interactions)
+L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
+vif(L_full_model)
+summary(L_full_model)
+
+#reduced model: remove Temp*leaf_habit, log_ht*Temp, myc_group*Temp
+L_reduced_m1 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + (1|study_species), data = full_df)
+vif(L_reduced_m1)
+summary(L_reduced_m1)
+tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+
+#use ggeffect to calculate the marginal effects of myc group and height 
+L_E1 <- ggeffect(L_reduced_m1, terms = c("log_ht", "myc_group"), type = "random")
+
+#plot the marginal effects and the raw data
+b <- ggplot() +
+  geom_point(data = full_df, aes(x = log_ht, y = LmTm, color = myc_group), alpha = .3) +
+  geom_line(data = L_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  theme(legend.position = "none")
 
 
-#Leaf:root model (maybe unnecessary)
-B_m1 <-lmer(log_LMRM~log_ht + myc_group + Temp + leaf_habit + (1|study_species), data = full_df)
-summary(B_m1)
-tab_model(B_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-plot(ggeffect(B_m1, terms = c("log_ht", "myc_group")), add.data = TRUE)
+#Leaf:root full model
+B_full_model <-lmer(log_LMRM ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
+vif(B_full_model)
+summary(B_full_model)
 
 
+#reduced model: remove myc_group*temp and leafhabit*Temp
+B_reduced_m1 <-lmer(log_LMRM ~ log_ht*leaf_habit + log_ht*myc_group +  log_ht*Temp  + Prec + (1|study_species), data = full_df)
+vif(B_reduced_m1)
+summary(B_reduced_m1)
+tab_model(B_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+
+#use ggeffect to calculate the marginal effects of myc group and height 
+B_E1 <- ggeffect(B_reduced_m1, terms = c("log_ht", "myc_group"), type = "random")
+
+#plot the marginal effects and the raw data
+c <- ggplot() +
+  geom_point(data = full_df, aes(x = log_ht, y = log_LMRM, color = myc_group), alpha = .3) +
+  geom_line(data = B_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  theme(legend.position = "none")
+
+cowplot::plot_grid(a, b, c, nrow = 1, labels="auto")
