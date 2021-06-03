@@ -193,9 +193,6 @@ tab_model(L_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show
 plot(ggeffect(L_m1, terms = c("log_ht", "myc_group"), type = "random"), add.data = TRUE)
 
 
-
-
-
 #Leaf:root model (maybe unnecessary)
 B_m1 <-lmer(log_LMRM~log_ht + myc_group + Temp + leaf_habit + (1|study_species), data = full_df)
 summary(B_m1)
