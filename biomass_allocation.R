@@ -166,26 +166,30 @@ summary(R_m1)
 r.squaredGLMM(R_m1)
 tab_model(R_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
-#use ggpredict to plot just the effects of myc group and temp
-plot(ggpredict(R_m1, terms = c("Temp", "myc_group")), add.data = TRUE)
-ggplot(data = full_df, aes(x = Temp, y = RmTm)) + geom_point(aes(color = myc_group))
+R_m3 <- lmer(RmTm~ myc_group + leaf_habit*log_ht + Temp + Prec + (1|study_species), data = full_df)
+summary(R_m3)
 
-#use ggpredict to plot the effects of myc group and height 
-plot(ggeffect(R_m1, terms = c("log_ht", "myc_group")), add.data = TRUE)
+#use ggeffect to calculate the marginal effects of myc group and height 
+R_m1_E1 <- ggeffect(R_m1, terms = c("log_ht", "myc_group"), add.data = TRUE)
+
 
 #use ggpredict to plot just the effects of myc group (remove Temp and height)
-plot(ggpredict(R_m1, terms = c("myc_group")), add.data = TRUE)
+plot(ggeffect(R_m1, terms = c("myc_group")), add.data = TRUE)
 
 ##Leaf mass/total mass models
 L_m1 <-lmer(LmTm~log_ht + myc_group + Temp + leaf_habit + (1|study_species), data = full_df)
 summary(L_m1)
 tab_model(L_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-plot(ggpredict(L_m1, terms = c("log_ht", "myc_group")), add.data = TRUE)
+plot(ggeffect(L_m1, terms = c("log_ht", "myc_group"), type = "random"), add.data = TRUE)
 
-#Leaf:root model
+
+
+
+
+#Leaf:root model (maybe unnecessary)
 B_m1 <-lmer(log_LMRM~log_ht + myc_group + Temp + leaf_habit + (1|study_species), data = full_df)
 summary(B_m1)
 tab_model(B_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
-plot(ggpredict(B_m1, terms = c("log_ht", "myc_group")), add.data = TRUE)
+plot(ggeffect(B_m1, terms = c("log_ht", "myc_group")), add.data = TRUE)
 
 
