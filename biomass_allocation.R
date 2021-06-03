@@ -21,6 +21,8 @@ library(ggeffects)
 library(arm)
 library(MuMIn)
 library(car)
+library(ggpubr)
+library(ggmap)
 theme_set(theme_cowplot())
 
 ###get FUNGALROOT data----
@@ -129,12 +131,12 @@ plot(full_df$LmTm~full_df$RmTm)
 
 #summarise group numbers for pfts, ecosystems, myc types
 sub <- full_df %>%
-  group_by(Temp, Prec, myc_group, leaf_habit) %>%
+  group_by(Temp, Prec, myc_group, leaf_habit, latitude, longitude) %>%
   summarise(n=n())
 
 
 ###Making some plots:----
-
+AM_ECM=c( '#8597FE', '#7CAE31')
 #Any strong correlations between continuous variables?
 full_df_cor=full_df %>% 
   dplyr::select(Temp, Prec, LmTm, RmTm,  log_LMRM, log_ht) %>% 
@@ -148,24 +150,39 @@ corrplot::corrplot(cor(full_df_cor), method="number", type="upper")
 # Color of myc type, shape for leaf habit, plotted on MAP/MAT
 
 clim_space=ggplot(sub,aes(x= Temp, y=Prec))+
-  geom_point(aes(shape=leaf_habit, colour=myc_group, size=n), alpha=0.8)+
-  scale_colour_manual(name="Mycorrhizal\nType", values=c('#CCBB44', '#114C3A'))+
-  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
+  geom_point(aes(colour=myc_group,shape=leaf_habit, size=n), alpha=0.65)+
+  scale_colour_manual(labels = c("AM", "ECM"),values=AM_ECM)+
+  scale_shape_manual(labels = c("Deciduous", "Evergreen"), values=c(16,17))+
   labs(x=expression("Mean Annual Temperature ("*degree*C*")"), y="Mean Annual Precipitation (mm)")+
-  theme(legend.title=element_text(hjust = 0.5))+
-  guides(color = guide_legend(override.aes = list(size=5)), shape = guide_legend(override.aes = list(size=5)))+
-  scale_size(range = c(2,6))
+  theme(legend.title=element_blank(),legend.margin = margin(0, 0, 0, 0),
+        legend.spacing.x = unit(0, "mm"), legend.spacing.y = unit(0, "mm"), 
+        legend.text=element_text(size=8), legend.position = c(.04, .85), 
+        axis.title=element_text(size=11), axis.text=element_text(size=10))+
+  guides(color = guide_legend(override.aes = list(size=3), order=1), shape = guide_legend(override.aes = list(size=4), order=2))+
+  scale_size(range = c(3,8), guide="none")
 clim_space
 #ggsave("Figure_1_climate.pdf", path="~/BAM", width= 88, height= 180, units="mm")
 #^ Was trying to figure out how to save this to our GitHub repository; failed
 
-geo_space=ggplot(full_df,aes(x= longitude, y=latitude))+
-  geom_point(aes(shape=leaf_habit, colour=myc_group), size=3)+
-  scale_colour_manual(name="Mycorrhizal\nType", values=c('#CCBB44', '#114C3A'))+
-  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
-  labs(x="Longitude", y="Latitude")+
-  theme(legend.title=element_text(hjust = 0.5))
-geo_space
+#map
+world <- map_data("world")
+
+map=ggplot(data=world)+
+  geom_polygon(aes(x=long, y=lat, group=group), fill="white", color="black", size=0.2)+
+  coord_fixed(1.3)+
+  theme(axis.text=element_blank(), axis.line = element_blank(), 
+        axis.ticks=element_blank(), axis.title=element_blank(), 
+        panel.background = element_rect(fill = "white"), 
+        #panel.border = element_rect(linetype="solid", fill=NA), legend.position="none")+
+        panel.border = element_blank(), legend.position="none")+
+  geom_point(aes(x = longitude, y = latitude,color=myc_group), data = sub, size = 1)+
+  scale_colour_manual(values=AM_ECM)
+map
+
+ggarrange(map, clim_space, nrow=1, ncol=2, labels=c("a", "b")) #may look odd with diff. screen widths; sized for saving as pdf using ggsave below.
+
+#ggsave("Figure_1.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=80,width=180, units="mm")
+
 
 ####models-----
 #make LMMS
@@ -188,16 +205,6 @@ tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re =
 R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random", )
 
 
-#plot the marginal effects and the raw data
-a <- ggplot() +
-  geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .4, size=3) +
-  geom_line(data = R_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
-  scale_colour_manual(name="Mycorrhizal\nType", values=c('#CCBB44', '#114C3A'))+
-  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
-  theme(legend.position = c(.65, .75), legend.title= element_text(hjust=0.5))+
-  labs(x= "ln(Height)", y="Root mass / Total mass" )
-a
-
 ##Leaf mass/total mass models
 #full model (all terms and interactions)
 L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
@@ -213,20 +220,10 @@ tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re =
 #use ggeffect to calculate the marginal effects of myc group and height 
 L_E1 <- ggeffect(L_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 
-#plot the marginal effects and the raw data
-b <- ggplot() +
-  geom_point(data = full_df, aes(x = log_ht, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .4, size=3) +
-  geom_line(data = L_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
-  scale_colour_manual(name="Mycorrhizal\nType", values=c("#B1D0BA", "#5A6A5F"))+
-  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
-  theme(legend.position = "none")
-b
-
 #Leaf:root full model
 B_full_model <-lmer(log_LMRM ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
 vif(B_full_model)
 summary(B_full_model)
-
 
 #reduced model: remove myc_group*temp and leafhabit*Temp
 B_reduced_m1 <-lmer(log_LMRM ~ log_ht*leaf_habit + log_ht*myc_group +  log_ht*Temp  + Prec + (1|study_species), data = full_df)
@@ -237,13 +234,39 @@ tab_model(B_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re =
 #use ggeffect to calculate the marginal effects of myc group and height 
 B_E1 <- ggeffect(B_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 
-#plot the marginal effects and the raw data
-c <- ggplot() +
-  geom_point(data = full_df, aes(x = log_ht, y = log_LMRM, color = myc_group, shape=leaf_habit), alpha = .4, size=3) +
-  geom_line(data = B_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
-  scale_colour_manual(name="Mycorrhizal\nType", values=c("#B1D0BA", "#5A6A5F"))+
-  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
-  theme(legend.position = "none")
-c
+#Figure 2: run through ggarrange
+#plot the marginal effects and the raw data for Rm/Tm
+a <- ggplot() +
+  geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
+  geom_line(data = R_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  scale_colour_manual(name="Mycorrhizal\nType", values=AM_ECM)+
+  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
+  #  theme(legend.position = c(.65, .75), legend.title= element_text(hjust=0.5))+
+  theme(legend.position = c(.45, .55), legend.title= element_text(hjust=0.5))+
+  labs(x= "ln(Height)", y="Root mass / Total mass" )
 
-cowplot::plot_grid(a, b, c, nrow = 1, labels="auto")
+#plot the marginal effects and the raw data for Lm/Tm
+b <- ggplot() +
+  geom_point(data = full_df, aes(x = log_ht, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
+  geom_line(data = L_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  scale_colour_manual(name="Mycorrhizal\nType", values=AM_ECM)+
+  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
+  theme(legend.position = "none")+
+  labs(x= "ln(Height)", y="Leaf mass / Total mass" )
+
+#plot the marginal effects and the raw data for Lm/Rm
+c <- ggplot() +
+  geom_point(data = full_df, aes(x = log_ht, y = log_LMRM, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
+  geom_line(data = B_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  scale_colour_manual(name="Mycorrhizal\nType", values=AM_ECM)+
+  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
+  theme(legend.position = "none", axis.title.y=element_text(size=12.5))+
+  labs(x= "ln(Height)", y="ln(Leaf mass / Root mass)" )
+
+#cowplot::plot_grid(a, b, c, nrow = 1, labels="auto")
+
+#here's a way to get the three figs and legend as their own quadrants of a square:
+leg=get_legend(a)
+a=a+theme(legend.position="none")
+ggarrange(a, b, c, leg, labels=c("a", "b", "c", " "), nrow=2, ncol=2)
+ggsave("Figure_2.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=160,width=180, units="mm")
