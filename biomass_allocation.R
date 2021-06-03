@@ -181,7 +181,7 @@ map
 
 ggarrange(map, clim_space, nrow=1, ncol=2, labels=c("a", "b")) #may look odd with diff. screen widths; sized for saving as pdf using ggsave below.
 
-#ggsave("Figure_1.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=80,width=180, units="mm")
+ggsave("Figure_1.pdf", height=80,width=180, units="mm")
 
 
 ####models-----
