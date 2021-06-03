@@ -185,8 +185,7 @@ summary(R_reduced_m1)
 tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #use ggeffect to calculate the marginal effects of myc group and height 
-R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random", )
-
+R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 
 #plot the marginal effects and the raw data
 a <- ggplot() +
