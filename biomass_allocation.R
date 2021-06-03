@@ -156,6 +156,7 @@ clim_space=ggplot(full_df,aes(x= Temp, y=Prec))+
 clim_space
 #ggsave("Figure_1_climate.pdf", path="~/BAM", width= 88, height= 180, units="mm")
 #^ Was trying to figure out how to save this to our GitHub repository; failed
+
 geo_space=ggplot(full_df,aes(x= longitude, y=latitude))+
   geom_point(aes(shape=leaf_habit, colour=myc_group), size=3)+
   scale_colour_manual(name="Mycorrhizal\nType", values=c("#B1D0BA", "#5A6A5F"))+
@@ -186,10 +187,12 @@ R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht", "myc_group"), type = "random"
 
 #plot the marginal effects and the raw data
 a <- ggplot() +
-  geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group), alpha = .3) +
+  geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .4, size=3) +
   geom_line(data = R_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  scale_colour_manual(name="Mycorrhizal\nType", values=c("#B1D0BA", "#5A6A5F"))+
+  scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
   theme(legend.position = c(.65, .75))
-
+a
 ##Leaf mass/total mass models
 #full model (all terms and interactions)
 L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
