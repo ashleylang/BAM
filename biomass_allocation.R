@@ -120,7 +120,7 @@ full_df = baad_df %>%
                                pft=="DA" ~ "deciduous"),
          evo_group= case_when(pft=="EA" ~ "angiosperm",
                               pft== "EG" ~ "gymnosperm",
-                              pft=="DA" ~ "angiosperm") )
+                              pft=="DA" ~ "angiosperm") ) 
 
 #check distributions
 hist(full_df$LmTm)
@@ -195,14 +195,18 @@ ggarrange(map, clim_space, nrow=1, ncol=2, labels=c("a", "b")) #may look odd wit
 #run models with standardized and unstandardized coefficients
 #use ggeffects to pull out effect of myc type
 
+full_df_mod <- full_df %>%
+  dplyr::select(RmTm, LmTm, log_LMRM, log_ht, leaf_habit, myc_group, Temp, Prec, study_species) %>%
+  drop_na()
+
 ##Root mass/total mass model
-R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
+R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 vif(R_full_model)
 summary(R_full_model)
 tab_model(R_full_model, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #remove insignificant interaction terms: log_ht*myc_group, Temp*myc_group, log_ht*Temp, Temp*leaf_habit (marginally significant)
-R_reduced_m1 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  + (1|study_species), data = full_df)
+R_reduced_m1 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  + (1|study_species), data = full_df_mod)
 vif(R_reduced_m1)
 summary(R_reduced_m1)
 tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
@@ -212,12 +216,12 @@ R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type =
 
 ##Leaf mass/total mass models
 #full model (all terms and interactions)
-L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
+L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 vif(L_full_model)
 summary(L_full_model)
 
 #reduced model: remove Temp*leaf_habit, log_ht*Temp, myc_group*Temp
-L_reduced_m1 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + (1|study_species), data = full_df)
+L_reduced_m1 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + (1|study_species), data = full_df_mod)
 vif(L_reduced_m1)
 summary(L_reduced_m1)
 tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
@@ -226,12 +230,18 @@ tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re =
 L_E1 <- ggeffect(L_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 
 #Leaf:root full model
+<<<<<<< HEAD
 S_full_model <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
 vif(S_full_model)
 summary(S_full_model)
+=======
+B_full_model <-lmer(log_LMRM ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+vif(B_full_model)
+summary(B_full_model)
+>>>>>>> 173bd223b9ed4ba872db451353b73305b4bad402
 
 #reduced model: remove myc_group*temp and leafhabit*Temp
-B_reduced_m1 <-lmer(log_LMRM ~ log_ht*leaf_habit + log_ht*myc_group +  log_ht*Temp  + Prec + (1|study_species), data = full_df)
+B_reduced_m1 <-lmer(log_LMRM ~ log_ht*leaf_habit + log_ht*myc_group +  log_ht*Temp  + Prec + (1|study_species), data = full_df_mod)
 vif(B_reduced_m1)
 summary(B_reduced_m1)
 tab_model(B_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
@@ -242,7 +252,11 @@ B_E1 <- ggeffect(B_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type =
 #Figure 2: run through ggarrange
 #plot the marginal effects and the raw data for Rm/Tm
 a <- ggplot() +
+<<<<<<< HEAD
   geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .1, size=3) +
+=======
+  geom_point(data = full_df_mod, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
+>>>>>>> 173bd223b9ed4ba872db451353b73305b4bad402
   geom_line(data = R_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
   scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
@@ -253,7 +267,11 @@ a <- ggplot() +
 
 #plot the marginal effects and the raw data for Lm/Tm
 b <- ggplot() +
+<<<<<<< HEAD
   geom_point(data = full_df, aes(x = log_ht, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .1, size=3) +
+=======
+  geom_point(data = full_df_mod, aes(x = log_ht, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
+>>>>>>> 173bd223b9ed4ba872db451353b73305b4bad402
   geom_line(data = L_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
   scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
@@ -264,7 +282,11 @@ b <- ggplot() +
 
 #plot the marginal effects and the raw data for Lm/Rm
 c <- ggplot() +
+<<<<<<< HEAD
   geom_point(data = full_df, aes(x = log_ht, y = log_LMRM, color = myc_group, shape=leaf_habit), alpha = .1, size=3) +
+=======
+  geom_point(data = full_df_mod, aes(x = log_ht, y = log_LMRM, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
+>>>>>>> 173bd223b9ed4ba872db451353b73305b4bad402
   geom_line(data = B_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
   scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
