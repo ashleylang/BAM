@@ -136,7 +136,8 @@ sub <- full_df %>%
 
 
 ###Making some plots:----
-AM_ECM=c( '#8597FE', '#7CAE31')
+AM_ECM=c("#E3C187", "#91BBA8")
+  #c( '#8597FE', '#7CAE31')
 #Any strong correlations between continuous variables?
 full_df_cor=full_df %>% 
   dplyr::select(Temp, Prec, LmTm, RmTm,  log_LMRM, log_ht) %>% 
@@ -181,7 +182,7 @@ map
 
 ggarrange(map, clim_space, nrow=1, ncol=2, labels=c("a", "b")) #may look odd with diff. screen widths; sized for saving as pdf using ggsave below.
 
-#ggsave("Figure_1.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=80,width=180, units="mm")
+ggsave("Figure_1.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=80,width=180, units="mm")
 
 
 ####models-----
@@ -236,7 +237,7 @@ B_E1 <- ggeffect(B_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type =
 #Figure 2: run through ggarrange
 #plot the marginal effects and the raw data for Rm/Tm
 a <- ggplot() +
-  geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
+  geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .1, size=3) +
   geom_line(data = R_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
   scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
@@ -247,7 +248,7 @@ a <- ggplot() +
 
 #plot the marginal effects and the raw data for Lm/Tm
 b <- ggplot() +
-  geom_point(data = full_df, aes(x = log_ht, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
+  geom_point(data = full_df, aes(x = log_ht, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .1, size=3) +
   geom_line(data = L_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
   scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
@@ -258,7 +259,7 @@ b <- ggplot() +
 
 #plot the marginal effects and the raw data for Lm/Rm
 c <- ggplot() +
-  geom_point(data = full_df, aes(x = log_ht, y = log_LMRM, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
+  geom_point(data = full_df, aes(x = log_ht, y = log_LMRM, color = myc_group, shape=leaf_habit), alpha = .1, size=3) +
   geom_line(data = B_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
   scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
@@ -273,4 +274,4 @@ c <- ggplot() +
 leg=get_legend(a)
 a=a+theme(legend.position="none")
 ggarrange(a, b, c, leg, labels=c("a", "b", "c", " "), nrow=2, ncol=2)
-#ggsave("Figure_2.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=160,width=180, units="mm")
+ggsave("Figure_2.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=160,width=180, units="mm")
