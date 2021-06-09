@@ -182,7 +182,9 @@ map
 
 ggarrange(map, clim_space, nrow=1, ncol=2, labels=c("a", "b")) #may look odd with diff. screen widths; sized for saving as pdf using ggsave below.
 
-ggsave("Figure_1.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=80,width=180, units="mm")
+
+#ggsave("Figure_1.pdf", height=80,width=180, units="mm")
+
 
 
 ####models-----
@@ -200,7 +202,7 @@ tab_model(R_full_model, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re =
 R_reduced_m1 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  + (1|study_species), data = full_df)
 vif(R_reduced_m1)
 summary(R_reduced_m1)
-tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
 
 #use ggeffect to calculate the marginal effects of myc group and height 
 R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
