@@ -79,6 +79,7 @@ baad_df <- as.data.frame(baad$data) %>% #Q from Ashley: What is the difference b
   mutate(LmTm = m.lf/ m.to,
          RmTm = m.rt/m.to,
          LMRM = m.lf/m.rt,
+         SmTm= m.st/m.to,
          pft = as.factor(pft)) %>% 
    filter( myc_group != "ERC" & myc_group != "Other" & pft != "DG")# %>%
 #   dplyr::select(studyName, pft, Temp, mat, Prec, vegetation, myc_group, h.t, m.so, m.to, m.rt, m.lf, LmSo, LmTm, LmSm, LaSm, LmLa, RmTm) 
@@ -124,6 +125,7 @@ full_df = baad_df %>%
 #check distributions
 hist(full_df$LmTm)
 hist(full_df$RmTm)
+hist(full_df$SmTm)
 hist(full_df$LMRM)#this needs to be log transformed
 hist(full_df$h.t) #this needs to be log transformed
 plot(full_df$LmTm~full_df$RmTm)
@@ -136,7 +138,8 @@ sub <- full_df %>%
 
 
 ###Making some plots:----
-AM_ECM=c("#E3C187", "#91BBA8")
+AM_ECM=c( "#91BBA8", "#E3C187")
+Leaf_root=c("#9AB67E", "#745D05")
   #c( '#8597FE', '#7CAE31')
 #Any strong correlations between continuous variables?
 full_df_cor=full_df %>% 
@@ -223,9 +226,9 @@ tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re =
 L_E1 <- ggeffect(L_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 
 #Leaf:root full model
-B_full_model <-lmer(log_LMRM ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
-vif(B_full_model)
-summary(B_full_model)
+S_full_model <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
+vif(S_full_model)
+summary(S_full_model)
 
 #reduced model: remove myc_group*temp and leafhabit*Temp
 B_reduced_m1 <-lmer(log_LMRM ~ log_ht*leaf_habit + log_ht*myc_group +  log_ht*Temp  + Prec + (1|study_species), data = full_df)
@@ -270,10 +273,45 @@ c <- ggplot() +
   guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
   
 
+#Making bar chart of above vs belowground mass by mycorrhizal type
+
+# full_df_d=full_df %>% 
+#   dplyr::select(study_species, myc_group, h.t,m.so, m.to, m.rt) %>%
+#   mutate(pct.aboveground=m.so/m.to,
+#          pct.belowground=m.rt/m.to) 
+
+# B_a <-lmer(pct.aboveground ~ log(h.t)*myc_group+ (1|study_species), data = full_df_d)
+# summary(B_a)
+# B_a1 <- ggeffect(B_a, terms = c("h.t[1:2]","myc_group"), type = "random")
+
+R_E2 <- ggeffect(R_reduced_m1, terms = c("log_ht[0:1]", "myc_group"), type = "random")
+L_E2 <- ggeffect(L_reduced_m1, terms = c("log_ht[0:1]", "myc_group"), type = "random")
+L_E2=as.data.frame(L_E2) %>% 
+  mutate(model="Leaf mass")
+
+d_data=as.data.frame(R_E2) %>% 
+  mutate(model="Root mass") %>% 
+  rbind(L_E2) %>% 
+  filter(x=="0") %>% 
+  mutate(predicted=case_when(model=="Root mass" ~ predicted*-1 ,
+                             model=="Leaf mass" ~ predicted), 
+           conf.low=case_when(model=="Root mass" ~ conf.low*-1 ,
+                              model=="Leaf mass" ~ conf.low), 
+           conf.high=case_when(model=="Root mass" ~ conf.high*-1 ,
+                               model=="Leaf mass" ~ conf.high))
+
+d=ggplot(data=d_data, aes(x=group, y=predicted, fill=model))+
+  geom_bar(position="stack", stat="identity")+
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2)+
+  scale_fill_manual(values=Leaf_root)+
+  labs(x=" ", y= "Predicted %\nof total biomass")+
+  theme(legend.title=element_blank())
+d
+
 #cowplot::plot_grid(a, b, c, nrow = 1, labels="auto")
 
 #here's a way to get the three figs and legend as their own quadrants of a square:
 leg=get_legend(a)
 a=a+theme(legend.position="none")
-ggarrange(a, b, c, leg, labels=c("a", "b", "c", " "), nrow=2, ncol=2)
+ggarrange(a, b, d, leg, labels=c("a", "b", "c", " "), nrow=2, ncol=2)
 ggsave("Figure_2.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=160,width=180, units="mm")
