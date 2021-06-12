@@ -138,8 +138,9 @@ sub <- full_df %>%
 
 
 ###Making some plots:----
-AM_ECM=c( "#91BBA8", "#E3C187")
-Leaf_root=c("#9AB67E", "#745D05")
+#AM_ECM=c( "#E3C187", "#91BBA8")
+AM_ECM=c("#C49F50", "#91BBA8")
+#Leaf_stem_root=c("#91BBA8","#E3C187", "#745D05")
   #c( '#8597FE', '#7CAE31')
 #Any strong correlations between continuous variables?
 full_df_cor=full_df %>% 
@@ -196,7 +197,7 @@ ggarrange(map, clim_space, nrow=1, ncol=2, labels=c("a", "b")) #may look odd wit
 #use ggeffects to pull out effect of myc type
 
 full_df_mod <- full_df %>%
-  dplyr::select(RmTm, LmTm, log_LMRM, log_ht, leaf_habit, myc_group, Temp, Prec, study_species) %>%
+  dplyr::select(RmTm, LmTm, SmTm, log_ht, leaf_habit, myc_group, Temp, Prec, study_species) %>%
   drop_na()
 
 ##Root mass/total mass model
@@ -214,6 +215,7 @@ tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digi
 #use ggeffect to calculate the marginal effects of myc group and height 
 R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 
+
 ##Leaf mass/total mass models
 #full model (all terms and interactions)
 L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
@@ -230,70 +232,65 @@ tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re =
 L_E1 <- ggeffect(L_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 
 #Leaf:root full model
-<<<<<<< HEAD
-S_full_model <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df)
+
+S_full_model <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 vif(S_full_model)
 summary(S_full_model)
-=======
-B_full_model <-lmer(log_LMRM ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
-vif(B_full_model)
-summary(B_full_model)
->>>>>>> 173bd223b9ed4ba872db451353b73305b4bad402
+
 
 #reduced model: remove myc_group*temp and leafhabit*Temp
-B_reduced_m1 <-lmer(log_LMRM ~ log_ht*leaf_habit + log_ht*myc_group +  log_ht*Temp  + Prec + (1|study_species), data = full_df_mod)
-vif(B_reduced_m1)
-summary(B_reduced_m1)
-tab_model(B_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+S_reduced_m1 <-lmer(SmTm ~ log_ht*leaf_habit +  Temp  + myc_group + Prec + (1|study_species), data = full_df_mod)
+vif(S_reduced_m1)
+summary(S_reduced_m1)
+tab_model(S_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #use ggeffect to calculate the marginal effects of myc group and height 
-B_E1 <- ggeffect(B_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
+S_E1 <- ggeffect(S_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 
 #Figure 2: run through ggarrange
 #plot the marginal effects and the raw data for Rm/Tm
 a <- ggplot() +
-<<<<<<< HEAD
-  geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .1, size=3) +
-=======
-  geom_point(data = full_df_mod, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
->>>>>>> 173bd223b9ed4ba872db451353b73305b4bad402
+  geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .15, size=3) +
   geom_line(data = R_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
   scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
-  #  theme(legend.position = c(.65, .75), legend.title= element_text(hjust=0.5))+
-  theme(legend.position = c(.45, .55), legend.title= element_text(hjust=0.5))+
-  labs(x= "ln(Height)", y="Root mass / Total mass" )+
+    theme(legend.position = "none")+
+ # scale_x_continuous(trans = "log2")+
+ # theme(legend.position = c(.45, .55), legend.title= element_text(hjust=0.5))+
+  labs(x= "ln(Tree height)", y="Root mass fraction" )+
+  ylim(0,1)+
   guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
 
 #plot the marginal effects and the raw data for Lm/Tm
 b <- ggplot() +
-<<<<<<< HEAD
-  geom_point(data = full_df, aes(x = log_ht, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .1, size=3) +
-=======
-  geom_point(data = full_df_mod, aes(x = log_ht, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
->>>>>>> 173bd223b9ed4ba872db451353b73305b4bad402
+  geom_point(data = full_df, aes(x = log_ht, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .15, size=3) +
   geom_line(data = L_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
-  scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
+  scale_colour_manual(name="Mycorrhizal\nType", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
-  theme(legend.position = "none")+
-  labs(x= "ln(Height)", y="Leaf mass / Total mass" )+
+ # theme(legend.position = "none")+
+  theme(legend.position = c(.67, .75), 
+        legend.title= element_text(hjust=0.5, size=10), 
+        legend.text=element_text(size=9),
+        legend.margin = margin(0, 0, 0, 0),
+        legend.spacing.x = unit(0, "mm"), 
+        legend.spacing.y = unit(1, "mm"))+
+  labs(x= "ln(Tree height)", y="Leaf mass fraction" )+
+  ylim(0,1)+
   guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
   
 
-#plot the marginal effects and the raw data for Lm/Rm
+#plot the marginal effects and the raw data for Sm/Tm
 c <- ggplot() +
-<<<<<<< HEAD
-  geom_point(data = full_df, aes(x = log_ht, y = log_LMRM, color = myc_group, shape=leaf_habit), alpha = .1, size=3) +
-=======
-  geom_point(data = full_df_mod, aes(x = log_ht, y = log_LMRM, color = myc_group, shape=leaf_habit), alpha = .2, size=3) +
->>>>>>> 173bd223b9ed4ba872db451353b73305b4bad402
-  geom_line(data = B_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  geom_point(data = full_df, aes(x = log_ht, y = SmTm, color = myc_group, shape=leaf_habit), alpha = .15, size=3) +
+  geom_line(data = S_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
   scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
-  theme(legend.position = "none", axis.title.y=element_text(size=12.5))+
-  labs(x= "ln(Height)", y="ln(Leaf mass / Root mass)" )+
+  theme(legend.position = "none")+
+  labs(x= "ln(Tree height)", y="Stem mass fraction" )+
+  ylim(0,1)+
   guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
-  
+
+
 
 #Making bar chart of above vs belowground mass by mycorrhizal type
 
@@ -308,32 +305,58 @@ c <- ggplot() +
 
 R_E2 <- ggeffect(R_reduced_m1, terms = c("log_ht[0:1]", "myc_group"), type = "random")
 L_E2 <- ggeffect(L_reduced_m1, terms = c("log_ht[0:1]", "myc_group"), type = "random")
+S_E2 <- ggeffect(S_reduced_m1, terms = c("log_ht[0:1]", "myc_group"), type = "random")
+
 L_E2=as.data.frame(L_E2) %>% 
-  mutate(model="Leaf mass")
+  mutate(model="Leaf")
+S_E2=as.data.frame(S_E2) %>% 
+  mutate(model="Stem")
 
 d_data=as.data.frame(R_E2) %>% 
-  mutate(model="Root mass") %>% 
+  mutate(model="Root") %>% 
   rbind(L_E2) %>% 
+  rbind(S_E2) %>% 
   filter(x=="0") %>% 
-  mutate(predicted=case_when(model=="Root mass" ~ predicted*-1 ,
-                             model=="Leaf mass" ~ predicted), 
-           conf.low=case_when(model=="Root mass" ~ conf.low*-1 ,
-                              model=="Leaf mass" ~ conf.low), 
-           conf.high=case_when(model=="Root mass" ~ conf.high*-1 ,
-                               model=="Leaf mass" ~ conf.high))
+  group_by(group) %>% 
+  mutate(ypos=case_when(model=="Leaf" ~ sum(predicted),
+                        model=="Stem" ~ sum(predicted[model != "Leaf"]),
+                        model=="Root" ~ predicted))
+    #%>% 
+  # mutate(predicted=case_when(model=="Root mass" ~ predicted*-1 ,
+  #                            model=="Leaf mass" ~ predicted,
+  #                            model=="Stem mass" ~ predicted), 
+  #          conf.low=case_when(model=="Root mass" ~ conf.low*-1 ,
+  #                             model=="Leaf mass" ~ conf.low,
+  #                             model=="Stem mass" ~ conf.low), 
+  #          conf.high=case_when(model=="Root mass" ~ conf.high*-1 ,
+  #                              model=="Leaf mass" ~ conf.high,
+  #                              model=="Stem mass" ~ conf.high))
+d_data$model=factor(d_data$model, levels=c("Leaf", "Stem", "Root"))
 
 d=ggplot(data=d_data, aes(x=group, y=predicted, fill=model))+
-  geom_bar(position="stack", stat="identity")+
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2)+
-  scale_fill_manual(values=Leaf_root)+
-  labs(x=" ", y= "Predicted %\nof total biomass")+
+  geom_bar(position="stack",
+           stat="identity",
+           colour="black")+
+    #pattern_type=model))+
+  # geom_bar_pattern(position="stack", 
+  #                  stat="identity",
+  #                   colour="black",
+  #                   fill="white",
+  #                  pattern="magick",
+  #                  pattern_scale        = 3)+
+ # scale_pattern_type_manual(values = c(Leaf = 'horizontal2', Stem = 'gray50', Root = 'gray15'))+
+  scale_fill_manual(values=c("gray92", "gray60", "gray25"))+
+  geom_errorbar(aes(ymin = ypos-std.error, ymax = ypos+std.error), width = 0.2, position="identity")+
+  labs(x=" ", y= "Predicted proportion\nof total biomass")+
   theme(legend.title=element_blank())
 d
 
 #cowplot::plot_grid(a, b, c, nrow = 1, labels="auto")
 
-#here's a way to get the three figs and legend as their own quadrants of a square:
-leg=get_legend(a)
-a=a+theme(legend.position="none")
-ggarrange(a, b, d, leg, labels=c("a", "b", "c", " "), nrow=2, ncol=2)
+#leg=get_legend(b)
+#b=b+theme(legend.position="none")
+
+#mods=ggarrange(a, b, c, leg, labels=c("a", "b", "c" , " "), nrow=2, ncol=2)
+#fig2=ggarrange(mods,d, nrow=1, ncol=2)
+ggarrange( b, c, a, d, labels=c("a", "b", "c" , "d"), nrow=2, ncol=2)
 ggsave("Figure_2.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=160,width=180, units="mm")
