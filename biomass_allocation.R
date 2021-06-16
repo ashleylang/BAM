@@ -214,7 +214,7 @@ tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digi
 
 #use ggeffect to calculate the marginal effects of myc group and height 
 R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
-
+R_E1$height=exp(R_E1$x)
 
 ##Leaf mass/total mass models
 #full model (all terms and interactions)
@@ -230,6 +230,7 @@ tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re =
 
 #use ggeffect to calculate the marginal effects of myc group and height 
 L_E1 <- ggeffect(L_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
+L_E1$height=exp(L_E1$x)
 
 #Leaf:root full model
 
@@ -246,47 +247,53 @@ tab_model(S_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re =
 
 #use ggeffect to calculate the marginal effects of myc group and height 
 S_E1 <- ggeffect(S_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
+S_E1$height=exp(S_E1$x)
 
 #Figure 2: run through ggarrange
 #plot the marginal effects and the raw data for Rm/Tm
+
+#TO make these log scale on x using raw heights, change x to h.t and geom_line x to height and 
+#change x axis scale by adding scale_x_continuous(trans="log2")
 a <- ggplot() +
-  geom_point(data = full_df, aes(x = log_ht, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .15, size=3) +
-  geom_line(data = R_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  geom_point(data = full_df, aes(x = h.t, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .15, size=3) +
+  geom_line(data = R_E1, aes(x = height, y = predicted, color = group), size = 1.5) +
   scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17))+
     theme(legend.position = "none")+
- # scale_x_continuous(trans = "log2")+
+  scale_x_continuous(trans='log2')+
  # theme(legend.position = c(.45, .55), legend.title= element_text(hjust=0.5))+
-  labs(x= "ln(Tree height)", y="Root mass fraction" )+
+  labs(x= "Tree height (m)", y="Root mass fraction" )+
   ylim(0,1)+
   guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
 
 #plot the marginal effects and the raw data for Lm/Tm
 b <- ggplot() +
-  geom_point(data = full_df, aes(x = log_ht, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .15, size=3) +
-  geom_line(data = L_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  geom_point(data = full_df, aes(x = h.t, y = LmTm, color = myc_group, shape=leaf_habit), alpha = .15, size=3) +
+  geom_line(data = L_E1, aes(x = height, y = predicted, color = group), size = 1.5) +
   scale_colour_manual(name="Mycorrhizal\nType", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
  # theme(legend.position = "none")+
+  scale_x_continuous(trans='log2')+
   theme(legend.position = c(.67, .75), 
         legend.title= element_text(hjust=0.5, size=10), 
         legend.text=element_text(size=9),
         legend.margin = margin(0, 0, 0, 0),
         legend.spacing.x = unit(0, "mm"), 
         legend.spacing.y = unit(1, "mm"))+
-  labs(x= "ln(Tree height)", y="Leaf mass fraction" )+
+  labs(x= "Tree height (m)", y="Leaf mass fraction" )+
   ylim(0,1)+
   guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
   
 
 #plot the marginal effects and the raw data for Sm/Tm
 c <- ggplot() +
-  geom_point(data = full_df, aes(x = log_ht, y = SmTm, color = myc_group, shape=leaf_habit), alpha = .15, size=3) +
-  geom_line(data = S_E1, aes(x = x, y = predicted, color = group), size = 1.5) +
+  geom_point(data = full_df, aes(x = h.t, y = SmTm, color = myc_group, shape=leaf_habit), alpha = .15, size=3) +
+  geom_line(data = S_E1, aes(x = height, y = predicted, color = group), size = 1.5) +
   scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
   theme(legend.position = "none")+
-  labs(x= "ln(Tree height)", y="Stem mass fraction" )+
+  scale_x_continuous(trans='log2', )+
+  labs(x= "Tree height (m)", y="Stem mass fraction" )+
   ylim(0,1)+
   guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
 
@@ -359,4 +366,4 @@ d
 #mods=ggarrange(a, b, c, leg, labels=c("a", "b", "c" , " "), nrow=2, ncol=2)
 #fig2=ggarrange(mods,d, nrow=1, ncol=2)
 ggarrange( b, c, a, d, labels=c("a", "b", "c" , "d"), nrow=2, ncol=2)
-ggsave("Figure_2.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=160,width=180, units="mm")
+#ggsave("Figure_2.pdf", path="/Users/ashleylang/Documents/GitHub/BAM/", height=160,width=180, units="mm")
