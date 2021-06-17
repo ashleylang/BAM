@@ -204,13 +204,13 @@ full_df_mod <- full_df %>%
 R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 vif(R_full_model)
 summary(R_full_model)
-tab_model(R_full_model, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+#tab_model(R_full_model, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #remove insignificant interaction terms: log_ht*myc_group, Temp*myc_group, log_ht*Temp, Temp*leaf_habit (marginally significant)
 R_reduced_m1 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  + (1|study_species), data = full_df_mod)
 vif(R_reduced_m1)
 summary(R_reduced_m1)
-tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+#tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
 
 #use ggeffect to calculate the marginal effects of myc group and height 
 R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
@@ -223,7 +223,7 @@ vif(L_full_model)
 summary(L_full_model)
 
 #reduced model: remove Temp*leaf_habit, log_ht*Temp, myc_group*Temp
-L_reduced_m1 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + (1|study_species), data = full_df_mod)
+L_reduced_m1 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec  + (1|study_species), data = full_df_mod)
 vif(L_reduced_m1)
 summary(L_reduced_m1)
 tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
@@ -243,11 +243,14 @@ summary(S_full_model)
 S_reduced_m1 <-lmer(SmTm ~ log_ht*leaf_habit +  Temp  + myc_group + Prec + (1|study_species), data = full_df_mod)
 vif(S_reduced_m1)
 summary(S_reduced_m1)
-tab_model(S_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+#tab_model(S_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #use ggeffect to calculate the marginal effects of myc group and height 
 S_E1 <- ggeffect(S_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 S_E1$height=exp(S_E1$x)
+
+#Table S1: Reduced model output
+tab_model(L_reduced_m1, S_reduced_m1, R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
 
 #Figure 2: run through ggarrange
 #plot the marginal effects and the raw data for Rm/Tm
