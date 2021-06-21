@@ -199,9 +199,11 @@ ggarrange(map, clim_space, nrow=1, ncol=2, labels=c("a", "b")) #may look odd wit
 full_df_mod <- full_df %>%
   dplyr::select(RmTm, LmTm, SmTm, log_ht, leaf_habit, myc_group, Temp, Prec, study_species) %>%
   drop_na() %>% 
-  separate(study_species, into=c("Study", "Genus", "Species"), sep="_", remove=F)
+  separate(study_species, into=c("Study", "Genus", "Species"), sep="_", remove=F) %>% 
+  unite(SppName, c(Genus, Species), sep="_")
 
-n=unique(full_df_mod$Study)
+nst=length(unique(full_df_mod$Study))
+nsp=length(unique(full_df_mod$SppName))
 
 ##Root mass/total mass model
 R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
