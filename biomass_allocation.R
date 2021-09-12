@@ -145,20 +145,20 @@ ggarrange(map, clim_space, nrow=1, ncol=2, labels=c("a", "b"))
 #make LMMS
 
 full_df_mod <- full_df %>%
-  dplyr::select(RmTm, LmTm, SmTm, log_ht, leaf_habit, myc_group, Temp, Prec, study_species) %>%
+  dplyr::select(RmTm, LmTm, SmTm, log_ht, leaf_habit, myc_group, Temp, Prec, study_species, family) %>%
   drop_na() %>% 
   separate(study_species, into=c("Study", "Genus", "Species"), sep="_", remove=F) %>% 
   unite(SppName, c(Genus, Species), sep="_")
-
+#1432 observations
 
 ##Root mass/total mass model
-R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
 vif(R_full_model)
 summary(R_full_model)
 #tab_model(R_full_model, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #remove insignificant interaction terms: log_ht*myc_group, Temp*myc_group, log_ht*Temp, Temp*leaf_habit (marginally significant)
-R_reduced_m1 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  + (1|study_species), data = full_df_mod)
+R_reduced_m1 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  + family + (1|study_species), data = full_df_mod)
 vif(R_reduced_m1)
 summary(R_reduced_m1)
 #tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
@@ -169,12 +169,12 @@ R_E1$height=exp(R_E1$x)
 
 ##Leaf mass/total mass models
 #full model (all terms and interactions)
-L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
 vif(L_full_model)
 summary(L_full_model)
 
 #reduced model: remove Temp*leaf_habit, log_ht*Temp, myc_group*Temp
-L_reduced_m1 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec  + (1|study_species), data = full_df_mod)
+L_reduced_m1 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec  + family+ (1|study_species), data = full_df_mod)
 vif(L_reduced_m1)
 summary(L_reduced_m1)
 tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
@@ -184,15 +184,15 @@ L_E1 <- ggeffect(L_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type =
 L_E1$height=exp(L_E1$x)
 
 #Stem mass/Total mass full model
-S_full_model <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+S_full_model <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family+ (1|study_species), data = full_df_mod)
 vif(S_full_model)
 summary(S_full_model)
 
 #reduced model: remove myc_group*temp and leafhabit*Temp
-S_reduced_m1 <-lmer(SmTm ~ log_ht*leaf_habit +  Temp  + myc_group + Prec + (1|study_species), data = full_df_mod)
+S_reduced_m1 <-lmer(SmTm ~ log_ht*leaf_habit +  Temp  + myc_group + Prec + family+(1|study_species), data = full_df_mod)
 vif(S_reduced_m1)
 summary(S_reduced_m1)
-#tab_model(S_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+tab_model(S_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #use ggeffect to calculate the marginal effects of myc group and height 
 S_E1 <- ggeffect(S_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
