@@ -1,10 +1,12 @@
 ##Tree biomass allocation differs by mycorrhizal association
-#For submission to Nature Ecology and Evolution, June 2021
+#For submission to Ecology
 
-### BAAD database (Falster et al 2015 Ecology)
-### FungalRoot database (Soudzilovskaia et al 2020 New Phytologist)
+#databases used in this analysis: 
+### BAAD database 
+#(Falster, Daniel S., Remko A. Duursma, Masae I. Ishihara, Diego R. Barneche, Richard G. FitzJohn, Angelica Vårhammar, Masahiro Aiba et al. "BAAD: a Biomass And Allometry Database for woody plants." Ecology 96, no. 5 (2015): 1445.)
 
-## Written by Ashley Lang and Fiona Jevon
+### FungalRoot database 
+#Soudzilovskaia, Nadejda A., Stijn Vaessen, Milagros Barcelo, Jinhong He, Saleh Rahimlou, Kessy Abarenkov, Mark C. Brundrett, Sofia IF Gomes, Vincent Merckx, and Leho Tedersoo. "FungalRoot: global online database of plant mycorrhizal associations." New Phytologist 227, no. 3 (2020): 955-966.
 
 
 #install.packages("devtools")
@@ -61,7 +63,7 @@ fungal_root_sp <- fungal_root %>%
   mutate(dupe = n()>1) %>% 
   filter(dupe==F)
 
-## Read in BAAD database
+## Read in BAAD database, remove groups with poor coverage: myc types other than AM and ECM, and decidious gymnosperms
 baad <- baad.data::baad_data()
 dict <- as.data.frame(baad$dictionary)
 baad_df <- as.data.frame(baad$data) %>% 
@@ -70,12 +72,9 @@ baad_df <- as.data.frame(baad$data) %>%
   left_join(fungal_root_sp, by = c("genus", "species")) %>% 
   mutate(LmTm = m.lf/ m.to,
          RmTm = m.rt/m.to,
-         LMRM = m.lf/m.rt,
          SmTm= m.st/m.to,
          pft = as.factor(pft)) %>% 
    filter( myc_group != "ERC" & myc_group != "Other" & pft != "DG")
-
-
 
 ###Extract MAT/MAP from WorldClim----
 r <- raster::getData("worldclim",var="bio",res=10)
@@ -100,7 +99,6 @@ full_df = baad_df %>%
   filter(RmTm>0, h.t >.5, myc_group != "ECM/AM") %>% 
   unite(study_species, studyName, genus, species, sep="_", remove=F) %>% 
   mutate(log_ht = log(h.t),
-         log_LMRM = log(LMRM),
          leaf_habit= case_when(pft=="EA" | pft== "EG" ~ "evergreen",
                                pft=="DA" ~ "deciduous"),
          evo_group= case_when(pft=="EA" ~ "angiosperm",
@@ -111,7 +109,11 @@ full_df = baad_df %>%
 
 AM_ECM=c("#C49F50", "#91BBA8")
 
-clim_space=ggplot(sub,aes(x= Temp, y=Prec))+
+sub <- full_df %>%
+  group_by(Temp, Prec, leaf_habit, myc_group, longitude, latitude) %>%
+  summarise(n = n())
+
+clim_space <- ggplot(sub, aes(x= Temp, y=Prec))+
   geom_point(aes(colour=myc_group,shape=leaf_habit, size=n), alpha=0.65)+
   scale_colour_manual(labels = c("AM", "ECM"),values=AM_ECM)+
   scale_shape_manual(labels = c("Deciduous", "Evergreen"), values=c(16,17))+
@@ -124,7 +126,7 @@ clim_space=ggplot(sub,aes(x= Temp, y=Prec))+
   scale_size(range = c(3,8), guide="none")
 clim_space
 
-#map
+ #map
 world <- map_data("world")
 
 map=ggplot(data=world)+
@@ -142,32 +144,57 @@ ggarrange(map, clim_space, nrow=1, ncol=2, labels=c("a", "b"))
 
 
 ####models-----
-#make LMMS
-
+#make clean dataset for models 
 full_df_mod <- full_df %>%
   dplyr::select(RmTm, LmTm, SmTm, log_ht, leaf_habit, myc_group, Temp, Prec, study_species, family) %>%
   drop_na() %>% 
   separate(study_species, into=c("Study", "Genus", "Species"), sep="_", remove=F) %>% 
   unite(SppName, c(Genus, Species), sep="_")
+<<<<<<< HEAD
 #1432 observations
 
 ##Root mass/total mass model
 R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
+=======
+
+#no transformation neessary
+hist(full_df_mod$RmTm)
+hist(full_df_mod$LmTm)
+hist(full_df_mod$SmTm)
+
+##Root mass/total mass model
+#first, test the simplest model to get an idea of the coefficient for myc
+R_mini_model <-lmer(RmTm ~ myc_group  + (1|study_species), data = full_df_mod)
+summary(R_mini_model)
+
+#next, test full model with all interaction terms
+R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+>>>>>>> d8eb95f131fc71fc6ae088704c54b45c04114548
 vif(R_full_model)
 summary(R_full_model)
 #tab_model(R_full_model, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+AIC(R_full_model)
+
 
 #remove insignificant interaction terms: log_ht*myc_group, Temp*myc_group, log_ht*Temp, Temp*leaf_habit (marginally significant)
 R_reduced_m1 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  + family + (1|study_species), data = full_df_mod)
 vif(R_reduced_m1)
 summary(R_reduced_m1)
 #tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+AIC(R_reduced_m1, R_full_model)
+R_full_model
 
-#use ggeffect to calculate the marginal effects of myc group and height 
+#use ggeffect to calculate the marginal effects of myc group on RM/TM across tree heights
 R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 R_E1$height=exp(R_E1$x)
 
 ##Leaf mass/total mass models
+
+#first, test the simplest model to get an idea of the coefficient for myc
+L_mini_model <-lmer(LmTm ~ myc_group  + (1|study_species), data = full_df_mod)
+summary(L_mini_model)
+
+
 #full model (all terms and interactions)
 L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
 vif(L_full_model)
@@ -179,7 +206,7 @@ vif(L_reduced_m1)
 summary(L_reduced_m1)
 tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
-#use ggeffect to calculate the marginal effects of myc group and height 
+#use ggeffect to calculate the marginal effects of myc group acorss tree heights 
 L_E1 <- ggeffect(L_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 L_E1$height=exp(L_E1$x)
 
@@ -187,12 +214,18 @@ L_E1$height=exp(L_E1$x)
 S_full_model <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family+ (1|study_species), data = full_df_mod)
 vif(S_full_model)
 summary(S_full_model)
+AIC(S_full_model)
 
 #reduced model: remove myc_group*temp and leafhabit*Temp
 S_reduced_m1 <-lmer(SmTm ~ log_ht*leaf_habit +  Temp  + myc_group + Prec + family+(1|study_species), data = full_df_mod)
 vif(S_reduced_m1)
 summary(S_reduced_m1)
+<<<<<<< HEAD
 tab_model(S_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+=======
+#tab_model(S_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+AIC(S_reduced_m1)
+>>>>>>> d8eb95f131fc71fc6ae088704c54b45c04114548
 
 #use ggeffect to calculate the marginal effects of myc group and height 
 S_E1 <- ggeffect(S_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
