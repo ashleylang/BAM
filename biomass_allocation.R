@@ -1,5 +1,5 @@
 ##Tree biomass allocation differs by mycorrhizal association
-#For submission to Nature Ecology and Evolution, June 2021
+#For submission to Ecology
 
 #databases used in this analysis: 
 ### BAAD database 
@@ -72,11 +72,9 @@ baad_df <- as.data.frame(baad$data) %>%
   left_join(fungal_root_sp, by = c("genus", "species")) %>% 
   mutate(LmTm = m.lf/ m.to,
          RmTm = m.rt/m.to,
-         LMRM = m.lf/m.rt,
          SmTm= m.st/m.to,
          pft = as.factor(pft)) %>% 
    filter( myc_group != "ERC" & myc_group != "Other" & pft != "DG")
-
 
 ###Extract MAT/MAP from WorldClim----
 r <- raster::getData("worldclim",var="bio",res=10)
@@ -101,7 +99,6 @@ full_df = baad_df %>%
   filter(RmTm>0, h.t >.5, myc_group != "ECM/AM") %>% 
   unite(study_species, studyName, genus, species, sep="_", remove=F) %>% 
   mutate(log_ht = log(h.t),
-         log_LMRM = log(LMRM),
          leaf_habit= case_when(pft=="EA" | pft== "EG" ~ "evergreen",
                                pft=="DA" ~ "deciduous"),
          evo_group= case_when(pft=="EA" ~ "angiosperm",
@@ -147,37 +144,50 @@ ggarrange(map, clim_space, nrow=1, ncol=2, labels=c("a", "b"))
 
 
 ####models-----
-#make LMMS
-
+#make clean dataset for models 
 full_df_mod <- full_df %>%
   dplyr::select(RmTm, LmTm, SmTm, log_ht, leaf_habit, myc_group, Temp, Prec, study_species) %>%
   drop_na() %>% 
   separate(study_species, into=c("Study", "Genus", "Species"), sep="_", remove=F) %>% 
   unite(SppName, c(Genus, Species), sep="_")
 
+#no transformation neessary
+hist(full_df_mod$RmTm)
+hist(full_df_mod$LmTm)
+hist(full_df_mod$SmTm)
 
 ##Root mass/total mass model
+#first, test the simplest model to get an idea of the coefficient for myc
 R_mini_model <-lmer(RmTm ~ myc_group  + (1|study_species), data = full_df_mod)
 summary(R_mini_model)
 
+#next, test full model with all interaction terms
 R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 vif(R_full_model)
 summary(R_full_model)
 #tab_model(R_full_model, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+AIC(R_full_model)
+
 
 #remove insignificant interaction terms: log_ht*myc_group, Temp*myc_group, log_ht*Temp, Temp*leaf_habit (marginally significant)
 R_reduced_m1 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  + (1|study_species), data = full_df_mod)
 vif(R_reduced_m1)
 summary(R_reduced_m1)
 #tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+AIC(R_reduced_m1, R_full_model)
+R_full_model
 
-#use ggeffect to calculate the marginal effects of myc group and height 
+#use ggeffect to calculate the marginal effects of myc group on RM/TM across tree heights
 R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 R_E1$height=exp(R_E1$x)
 
-
-
 ##Leaf mass/total mass models
+
+#first, test the simplest model to get an idea of the coefficient for myc
+L_mini_model <-lmer(LmTm ~ myc_group  + (1|study_species), data = full_df_mod)
+summary(L_mini_model)
+
+
 #full model (all terms and interactions)
 L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 vif(L_full_model)
@@ -189,7 +199,7 @@ vif(L_reduced_m1)
 summary(L_reduced_m1)
 tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
-#use ggeffect to calculate the marginal effects of myc group and height 
+#use ggeffect to calculate the marginal effects of myc group acorss tree heights 
 L_E1 <- ggeffect(L_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 L_E1$height=exp(L_E1$x)
 
@@ -197,12 +207,14 @@ L_E1$height=exp(L_E1$x)
 S_full_model <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 vif(S_full_model)
 summary(S_full_model)
+AIC(S_full_model)
 
 #reduced model: remove myc_group*temp and leafhabit*Temp
 S_reduced_m1 <-lmer(SmTm ~ log_ht*leaf_habit +  Temp  + myc_group + Prec + (1|study_species), data = full_df_mod)
 vif(S_reduced_m1)
 summary(S_reduced_m1)
 #tab_model(S_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+AIC(S_reduced_m1)
 
 #use ggeffect to calculate the marginal effects of myc group and height 
 S_E1 <- ggeffect(S_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
