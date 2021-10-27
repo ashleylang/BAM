@@ -1,10 +1,12 @@
 ##Tree biomass allocation differs by mycorrhizal association
 #For submission to Nature Ecology and Evolution, June 2021
 
-### BAAD database (Falster et al 2015 Ecology)
-### FungalRoot database (Soudzilovskaia et al 2020 New Phytologist)
+#databases used in this analysis: 
+### BAAD database 
+#(Falster, Daniel S., Remko A. Duursma, Masae I. Ishihara, Diego R. Barneche, Richard G. FitzJohn, Angelica Vårhammar, Masahiro Aiba et al. "BAAD: a Biomass And Allometry Database for woody plants." Ecology 96, no. 5 (2015): 1445.)
 
-## Written by Ashley Lang and Fiona Jevon
+### FungalRoot database 
+#Soudzilovskaia, Nadejda A., Stijn Vaessen, Milagros Barcelo, Jinhong He, Saleh Rahimlou, Kessy Abarenkov, Mark C. Brundrett, Sofia IF Gomes, Vincent Merckx, and Leho Tedersoo. "FungalRoot: global online database of plant mycorrhizal associations." New Phytologist 227, no. 3 (2020): 955-966.
 
 
 #install.packages("devtools")
@@ -61,7 +63,7 @@ fungal_root_sp <- fungal_root %>%
   mutate(dupe = n()>1) %>% 
   filter(dupe==F)
 
-## Read in BAAD database
+## Read in BAAD database, remove groups with poor coverage: myc types other than AM and ECM, and decidious gymnosperms
 baad <- baad.data::baad_data()
 dict <- as.data.frame(baad$dictionary)
 baad_df <- as.data.frame(baad$data) %>% 
@@ -74,7 +76,6 @@ baad_df <- as.data.frame(baad$data) %>%
          SmTm= m.st/m.to,
          pft = as.factor(pft)) %>% 
    filter( myc_group != "ERC" & myc_group != "Other" & pft != "DG")
-
 
 
 ###Extract MAT/MAP from WorldClim----
@@ -111,7 +112,11 @@ full_df = baad_df %>%
 
 AM_ECM=c("#C49F50", "#91BBA8")
 
-clim_space=ggplot(sub,aes(x= Temp, y=Prec))+
+sub <- full_df %>%
+  group_by(Temp, Prec, leaf_habit, myc_group, longitude, latitude) %>%
+  summarise(n = n())
+
+clim_space <- ggplot(sub, aes(x= Temp, y=Prec))+
   geom_point(aes(colour=myc_group,shape=leaf_habit, size=n), alpha=0.65)+
   scale_colour_manual(labels = c("AM", "ECM"),values=AM_ECM)+
   scale_shape_manual(labels = c("Deciduous", "Evergreen"), values=c(16,17))+
@@ -124,7 +129,7 @@ clim_space=ggplot(sub,aes(x= Temp, y=Prec))+
   scale_size(range = c(3,8), guide="none")
 clim_space
 
-#map
+ #map
 world <- map_data("world")
 
 map=ggplot(data=world)+
@@ -152,6 +157,9 @@ full_df_mod <- full_df %>%
 
 
 ##Root mass/total mass model
+R_mini_model <-lmer(RmTm ~ myc_group  + (1|study_species), data = full_df_mod)
+summary(R_mini_model)
+
 R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 vif(R_full_model)
 summary(R_full_model)
@@ -166,6 +174,8 @@ summary(R_reduced_m1)
 #use ggeffect to calculate the marginal effects of myc group and height 
 R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 R_E1$height=exp(R_E1$x)
+
+
 
 ##Leaf mass/total mass models
 #full model (all terms and interactions)
