@@ -175,14 +175,18 @@ summary(R_full_model)
 #tab_model(R_full_model, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 AIC(R_full_model)
 
-
 #remove insignificant interaction terms: log_ht*myc_group, Temp*myc_group, log_ht*Temp, Temp*leaf_habit (marginally significant)
 R_reduced_m1 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  + family + (1|study_species), data = full_df_mod)
 vif(R_reduced_m1)
 summary(R_reduced_m1)
 #tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
 AIC(R_reduced_m1, R_full_model)
-R_full_model
+
+#check each interaction term to be sure that the AIC goes down with its removal:
+R_m2 <- lmer(RmTm ~ log_ht*leaf_habit  + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+R_m3 <- lmer(RmTm ~  myc_group + log_ht*leaf_habit  + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+R_m4 <- lmer(RmTm ~ myc_group  + log_ht*leaf_habit + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+AIC(R_full_model, R_m2, R_m3, R_m4, R_reduced_m1)
 
 #use ggeffect to calculate the marginal effects of myc group on RM/TM across tree heights
 R_E1 <- ggeffect(R_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
@@ -206,6 +210,12 @@ vif(L_reduced_m1)
 summary(L_reduced_m1)
 tab_model(L_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
+#check to ensure that removal of interactions improves AIC
+L_m2 <- lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp +  Prec + (1|study_species), data = full_df_mod)
+L_m3 <- lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + Temp + Prec + (1|study_species), data = full_df_mod)
+AIC(L_full_model, L_m2, L_m3, L_reduced_m1)
+
+
 #use ggeffect to calculate the marginal effects of myc group acorss tree heights 
 L_E1 <- ggeffect(L_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 L_E1$height=exp(L_E1$x)
@@ -214,18 +224,31 @@ L_E1$height=exp(L_E1$x)
 S_full_model <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family+ (1|study_species), data = full_df_mod)
 vif(S_full_model)
 summary(S_full_model)
-AIC(S_full_model)
 
+<<<<<<< HEAD
 #reduced model: remove myc_group*temp and leafhabit*Temp
 S_reduced_m1 <-lmer(SmTm ~ log_ht*leaf_habit +  Temp  + myc_group + Prec + family+(1|study_species), data = full_df_mod)
+=======
+#reduced model: remove myc_group*temp and log_ht*myc_group
+S_reduced_m1 <-lmer(SmTm ~ log_ht*leaf_habit + myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+>>>>>>> c54a83b4a87e7d9fa6cdf41f2110e52d102607fb
 vif(S_reduced_m1)
 summary(S_reduced_m1)
 <<<<<<< HEAD
 tab_model(S_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 =======
 #tab_model(S_reduced_m1, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
+<<<<<<< HEAD
 AIC(S_reduced_m1)
 >>>>>>> d8eb95f131fc71fc6ae088704c54b45c04114548
+=======
+
+#check to ensure that removal of interactions improves AIC
+S_m2 <- lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group  + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+S_m3 <- lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Prec + (1|study_species), data = full_df_mod)
+AIC(S_full_model, S_m2, S_m3, S_reduced_m1)
+
+>>>>>>> c54a83b4a87e7d9fa6cdf41f2110e52d102607fb
 
 #use ggeffect to calculate the marginal effects of myc group and height 
 S_E1 <- ggeffect(S_reduced_m1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
