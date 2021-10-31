@@ -1,5 +1,6 @@
 ##Tree biomass allocation differs by mycorrhizal association
 #For submission to Ecology
+#Ashley Lang and Fiona Jevon
 
 #databases used in this analysis: 
 ### BAAD database 
