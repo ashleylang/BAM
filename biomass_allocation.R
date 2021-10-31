@@ -150,12 +150,19 @@ full_df_mod <- full_df %>%
   drop_na() %>% 
   separate(study_species, into=c("Study", "Genus", "Species"), sep="_", remove=F) %>% 
   unite(SppName, c(Genus, Species), sep="_")
-<<<<<<< HEAD
+
 #1432 observations
+full_df_mod %>% group_by(myc_group) %>% summarise(fam_num = n_distinct(family))
+#families by myc type : 28 AM, 6 ECM
+
+full_df_mod %>% group_by(leaf_habit) %>% summarise(fam_num = n_distinct(family))
+#families by leaf habit: 19 decidous, 17 evergreen
+
+full_df_mod %>% group_by(leaf_habit, myc_group) %>% summarise(n = n())
+
 
 ##Root mass/total mass model
 R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
-=======
 
 #no transformation neessary
 hist(full_df_mod$RmTm)
@@ -169,7 +176,7 @@ summary(R_mini_model)
 
 #next, test full model with all interaction terms
 R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
->>>>>>> d8eb95f131fc71fc6ae088704c54b45c04114548
+
 vif(R_full_model)
 summary(R_full_model)
 #tab_model(R_full_model, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
@@ -179,8 +186,9 @@ AIC(R_full_model)
 R_reduced_m1 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  + family + (1|study_species), data = full_df_mod)
 vif(R_reduced_m1)
 summary(R_reduced_m1)
-#tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
 AIC(R_reduced_m1, R_full_model)
+anova(R_reduced_m1)
 
 #check each interaction term to be sure that the AIC goes down with its removal:
 R_m2 <- lmer(RmTm ~ log_ht*leaf_habit  + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
