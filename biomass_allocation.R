@@ -1,5 +1,6 @@
 ##Tree biomass allocation differs by mycorrhizal association
 #For submission to Ecology
+#Ashley Lang and Fiona Jevon
 
 #databases used in this analysis: 
 ### BAAD database 
@@ -76,8 +77,6 @@ baad_df <- as.data.frame(baad$data) %>%
          pft = as.factor(pft)) %>% 
    filter( myc_group != "ERC" & myc_group != "Other" & pft != "DG")
 
-
-
 ###Extract MAT/MAP from WorldClim----
 r <- raster::getData("worldclim",var="bio",res=10)
 r <- r[[c(1,12)]]
@@ -148,25 +147,27 @@ ggarrange(map, clim_space, nrow=1, ncol=2, labels=c("a", "b"))
 ####models-----
 #make clean dataset for models 
 full_df_mod <- full_df %>%
-  dplyr::select(RmTm, LmTm, SmTm, log_ht, h.t, leaf_habit, myc_group, Temp, Prec, study_species, family) %>%
+  dplyr::select(RmTm, LmTm, SmTm, log_ht, leaf_habit, myc_group, Temp, Prec, study_species, family) %>%
   drop_na() %>% 
   separate(study_species, into=c("Study", "Genus", "Species"), sep="_", remove=F) %>% 
   unite(SppName, c(Genus, Species), sep="_")
+<<<<<<< HEAD
 #1429 observations
+=======
 
-#checking if there's a bias in tree height with myc type or leaf habit:
-baad_df_myc_height=full_df_mod %>% 
-  group_by(myc_group) %>% 
-  summarise(meanTreeheight=mean(h.t[!is.na(h.t)]), maxTreeheight=max(h.t[!is.na(h.t)]), minTreeheight=min(h.t[!is.na(h.t)]), medianTreeheight=median(h.t[!is.na(h.t)]))
+#1432 observations
+full_df_mod %>% group_by(myc_group) %>% summarise(fam_num = n_distinct(family))
+#families by myc type : 28 AM, 6 ECM
+>>>>>>> 0f9bc52284416787186028d2ddf74ce79d9f82e0
 
-baad_df_leaf_habit=full_df_mod %>% 
-  group_by(leaf_habit) %>% 
-  summarise(meanTreeheight=mean(h.t[!is.na(h.t)]), maxTreeheight=max(h.t[!is.na(h.t)]), minTreeheight=min(h.t[!is.na(h.t)]), medianTreeheight=median(h.t[!is.na(h.t)]))
+full_df_mod %>% group_by(leaf_habit) %>% summarise(fam_num = n_distinct(family))
+#families by leaf habit: 19 decidous, 17 evergreen
+
+full_df_mod %>% group_by(leaf_habit, myc_group) %>% summarise(n = n())
 
 
 ##Root mass/total mass model
 R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
-
 
 #no transformation neessary
 hist(full_df_mod$RmTm)
@@ -190,8 +191,9 @@ AIC(R_full_model)
 R_reduced_m1 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  +  (1|study_species), data = full_df_mod)
 vif(R_reduced_m1)
 summary(R_reduced_m1)
-#tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+tab_model(R_reduced_m1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
 AIC(R_reduced_m1, R_full_model)
+anova(R_reduced_m1)
 
 #with family:
 #R_reduced_m2 <-lmer(RmTm~log_ht*leaf_habit + myc_group + Temp + Prec  + family + (1|study_species), data = full_df_mod)
