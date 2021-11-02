@@ -140,7 +140,7 @@ map=ggplot(data=world)+
   geom_point(aes(x = longitude, y = latitude,color=myc_group), data = sub, size = 1)+
   scale_colour_manual(values=AM_ECM)
 
-
+#Figure 1:
 ggarrange(map, clim_space, nrow=1, ncol=2, labels=c("a", "b")) 
 
 
