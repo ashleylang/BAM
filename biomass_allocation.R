@@ -163,7 +163,7 @@ full_df_mod %>% group_by(leaf_habit) %>% summarise(fam_num = n_distinct(family))
 full_df_mod %>% group_by(leaf_habit, myc_group) %>% summarise(n = n())
 
 #check to see if variables need to be transformed
-hist(full_df_mod$RmTm)
+hist(full_df_mod[full_df_mod$myc_group=="AM",]$RmTm)
 hist(full_df_mod$LmTm)
 hist(full_df_mod$SmTm)
 
@@ -186,20 +186,21 @@ AIC(R_full_model_f)
 #tab_model(R_full_model_f, show.se = TRUE, show.ci = FALSE, digits = 3, digits.re = 3, show.std = "std2")
 
 #remove insignificant interaction terms, testing for AIC improvement: log_ht*myc_group, Temp*myc_group, log_ht*Temp, Temp*leaf_habit (marginally significant)
-R_reduced1 <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
+R_reduced1 <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 summary(R_reduced1)
 AIC(R_reduced1)
-R_reduced2 <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
+R_reduced2 <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 summary(R_reduced2)
 AIC(R_reduced2)
-R_reduced3 <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + log_ht*Temp + Prec + family + (1|study_species), data = full_df_mod)
+R_reduced3 <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + log_ht*Temp + Prec + (1|study_species), data = full_df_mod)
 summary(R_reduced3)
 AIC(R_reduced3)
-R_reduced4 <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + Temp + Prec + family + (1|study_species), data = full_df_mod)
+R_reduced4 <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + Temp + Prec + (1|study_species), data = full_df_mod)
 summary(R_reduced4)
 AIC(R_reduced4)
 vif(R_reduced4)
 
+AIC(R_reduced1, R_reduced2, R_reduced3, R_reduced4)
 #use ggeffect to calculate the marginal effects of myc group on RM/TM across tree heights
 R_E1 <- ggeffect(R_reduced4, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 R_E1$height=exp(R_E1$x)
@@ -211,26 +212,26 @@ L_mini_model <-lmer(LmTm ~ myc_group  + (1|study_species), data = full_df_mod)
 summary(L_mini_model)
 
 #full model (all terms and interactions, including plant family)
-L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
+L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 vif(L_full_model)
 summary(L_full_model)
 AIC(L_full_model)
 
 #remove insignificant interaction terms, testing for AIC improvement
-L_reduced1 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
+L_reduced1 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + Temp*leaf_habit + Prec  + (1|study_species), data = full_df_mod)
 summary(L_reduced1)
 AIC(L_reduced1)
 
-L_reduced2 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + Prec + family + (1|study_species), data = full_df_mod)
+L_reduced2 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + Prec  + (1|study_species), data = full_df_mod)
 summary(L_reduced2)
 AIC(L_reduced2)
 
-L_reduced3 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + family + (1|study_species), data = full_df_mod)
+L_reduced3 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec  + (1|study_species), data = full_df_mod)
 summary(L_reduced3)
 AIC(L_reduced3)
 vif(L_reduced3)
 
-
+AIC(L_reduced1, L_reduced2, L_reduced3)
 #use ggeffect to calculate the marginal effects of myc group acorss tree heights 
 L_E1 <- ggeffect(L_reduced3, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 L_E1$height=exp(L_E1$x)
@@ -240,7 +241,7 @@ L_E1$height=exp(L_E1$x)
 S_mini_model <-lmer(SmTm ~ myc_group  + (1|study_species), data = full_df_mod)
 summary(S_mini_model)
 
-S_full_model <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
+S_full_model <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 vif(S_full_model)
 summary(S_full_model)
 AIC(S_full_model)
@@ -249,23 +250,23 @@ AIC(S_full_model)
 #with plant family
 #S_reduced_m2 <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + family +(1|study_species), data = full_df_mod)
 #without plant family
-S_reduced1 <- lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Prec + family + (1|study_species), data = full_df_mod)
+S_reduced1 <- lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Prec + (1|study_species), data = full_df_mod)
 summary(S_reduced1)
 AIC(S_reduced1)
 
-S_reduced2 <- lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + Prec + family + (1|study_species), data = full_df_mod)
+S_reduced2 <- lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + Prec + (1|study_species), data = full_df_mod)
 summary(S_reduced2)
 AIC(S_reduced2)
 
-S_reduced3 <- lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + family + (1|study_species), data = full_df_mod)
+S_reduced3 <- lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + (1|study_species), data = full_df_mod)
 summary(S_reduced3)
 AIC(S_reduced3)
 
-S_reduced4 <- lmer(SmTm ~ log_ht*leaf_habit + myc_group + Temp + Prec + family + (1|study_species), data = full_df_mod)
+S_reduced4 <- lmer(SmTm ~ log_ht*leaf_habit + myc_group + Temp + Prec + (1|study_species), data = full_df_mod)
 summary(S_reduced4)
 AIC(S_reduced4)
 
-S_reduced5 <- lmer(SmTm ~ log_ht + leaf_habit + myc_group + Temp + Prec + family + (1|study_species), data = full_df_mod)
+S_reduced5 <- lmer(SmTm ~ log_ht + leaf_habit + myc_group + Temp + Prec + (1|study_species), data = full_df_mod)
 summary(S_reduced5)
 AIC(S_reduced5)
 
@@ -342,17 +343,22 @@ d_data=as.data.frame(R_E2) %>%
   group_by(group) %>% 
   mutate(ypos=case_when(model=="Leaf" ~ sum(predicted),
                         model=="Stem" ~ sum(predicted[model != "Leaf"]),
-                        model=="Root" ~ predicted))
+                        model=="Root" ~ predicted)) %>% 
+  mutate(scaled_proportion=case_when(group=="AM" ~ ypos/0.9907910,
+                                     group=="ECM" ~ ypos/0.9871502)) %>% 
+  mutate(scaled_predicted=case_when(group=="AM" ~ predicted/0.9907910,
+                                    group=="ECM" ~ predicted/0.9871502))
 
 d_data$model=factor(d_data$model, levels=c("Leaf", "Stem", "Root"))
-d=ggplot(data=d_data, aes(x=group, y=predicted, fill=model))+
+d=ggplot(data=d_data, aes(x=group, y=scaled_predicted, fill=model))+
   geom_bar(position="stack",
            stat="identity",
            colour="black")+
    scale_fill_manual(values=c("gray92", "gray60", "gray25"))+
-  geom_errorbar(aes(ymin = ypos-std.error, ymax = ypos+std.error), width = 0.2, position="identity")+
+  geom_errorbar(aes(ymin = scaled_proportion-std.error, ymax = scaled_proportion+std.error), width = 0.2, position="identity")+
   labs(x=" ", y= "Predicted proportion\nof total biomass")+
   theme(legend.title=element_blank())
 
 
 ggarrange( b, c, a, d, labels=c("a", "b", "c" , "d"), nrow=2, ncol=2)
+#ggsave("Figure_2.tiff")
