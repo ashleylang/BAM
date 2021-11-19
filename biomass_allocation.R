@@ -162,6 +162,8 @@ full_df_mod %>% group_by(leaf_habit) %>% summarise(fam_num = n_distinct(family))
 
 full_df_mod %>% group_by(leaf_habit, myc_group) %>% summarise(n = n())
 
+View(full_df_mod %>% group_by(family) %>% summarise(sp_num = n_distinct(SppName)))
+
 #check to see if variables need to be transformed
 hist(full_df_mod$RmTm)
 hist(full_df_mod[full_df_mod$myc_group=="AM",]$RmTm)
@@ -190,7 +192,7 @@ summary(T_full_model_f)
 AIC(T_full_model, T_full_model_f)
 #AIC is better for the model with plant family *included*
 
-#remove insignificant interaction terms, testing for AIC improvement
+#remove insignificant interaction terms, testing for AIC improvement. Leave familiy in models
 T_reduced1_f <- lmer(log(m.to) ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
 summary(T_reduced1_f)
 
@@ -223,6 +225,7 @@ summary(R_full_model)
 #same but with plant family added
 R_full_model_f <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
 vif(R_full_model_f)
+
 summary(R_full_model_f)
 
 #remove insignificant interaction terms, testing for AIC improvement: log_ht*myc_group, Temp*myc_group, log_ht*Temp, Temp*leaf_habit (marginally significant)
@@ -342,9 +345,9 @@ AIC(S_reduced5_f, S_reduced5)
 S_E1 <- ggeffect(S_reduced5, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 S_E1$height=exp(S_E1$x)
 
-#combining models and plotting----
+#combining models into a table and creating plots----
 # Best, reduced model output across all three tissue types and total biomass
-tab_model(L_reduced3, S_reduced5, R_reduced4, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+tab_model(L_reduced3, S_reduced5, R_reduced4, T_reduced4_f, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
 
 #Figure 2:
 #plot the marginal effects and the raw data for Rm/Tm
@@ -440,3 +443,16 @@ d=ggplot(data=d_data, aes(x=group, y=scaled_predicted, fill=model))+
 
 ggarrange( b, c, a, d, labels=c("a", "b", "c" , "d"), nrow=2, ncol=2)
 #ggsave("Figure_2.tiff")
+
+##phylogenetic analysis----
+
+AM_ECM=c("#C49F50", "#91BBA8")
+spp_sum <- full_df_mod %>%
+  group_by(SppName, myc_group) %>%
+  summarise(n = n_distinct())
+
+library(ape)
+tree <- read.tree(file = "phyliptree1.phy")
+tree2 <- compute.brlen(tree, method = "Grafen")
+plot.phylo(tree2, cex = 0.7, tip.col = c(rep("#C49F50", 11), rep("#91BBA8", 2), rep("#C49F50", 8), rep("#91BBA8", 5), rep("#C49F50", 12), rep("#91BBA8", 7),  rep("#C49F50", 3), rep("#91BBA8", 7)))
+
