@@ -537,3 +537,4 @@ myshps <- c(1,17)[shps2]
 #make figure with labelled phylogenetic tree of the tree speceis used in this analysis
 plot.phylo(tree.a$scenario.3, tip.color = mycol, cex = .7, label.offset = 12) 
   tiplabels(pch = myshps, col = mycol, cex = .7, adj = 7)
+  
