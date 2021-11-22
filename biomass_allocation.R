@@ -445,7 +445,6 @@ ggarrange( b, c, a, d, labels=c("a", "b", "c" , "d"), nrow=2, ncol=2)
 #ggsave("Figure_2.tiff")
 
 ##phylogenetic analysis----
-
 AM_ECM=c("#C49F50", "#91BBA8")
 spp_sum <- full_df_mod %>%
   group_by(SppName, myc_group) %>%
@@ -456,3 +455,24 @@ tree <- read.tree(file = "phyliptree1.phy")
 tree2 <- compute.brlen(tree, method = "Grafen")
 plot.phylo(tree2, cex = 0.7, tip.col = c(rep("#C49F50", 11), rep("#91BBA8", 2), rep("#C49F50", 8), rep("#91BBA8", 5), rep("#C49F50", 12), rep("#91BBA8", 7),  rep("#C49F50", 3), rep("#91BBA8", 7)))
 
+##better version
+#devtools::install_github("jinyizju/V.PhyloMaker")
+library(V.PhyloMaker)
+
+#create df with species of interest in appropriate format
+sp_phy <- full_df_mod %>%
+  group_by(SppName, family) %>%
+  summarise(n = n_distinct()) %>%
+  mutate(species = str_replace(SppName, "_", " ")) %>%
+  separate(SppName, into = c("genus", "spp"), sep = "_") %>%
+  dplyr::select(species,genus, family) %>%
+  mutate(family = replace(family, family == "Aceraceae", "Sapindaceae"),
+         family = replace(family, family == "Taxodiaceae", "Cupressaceae"))
+
+#generate tree
+tree.a <- phylo.maker(sp.list = sp_phy, tree = GBOTB.extended, nodes = nodes.info.1, scenarios="S3")
+
+plot.phylo(tree.a$scenario.3)
+is.ultrametric(tree.a$scenario.3)
+
+branching.times(tree.a$scenario.3)
