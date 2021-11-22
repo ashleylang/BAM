@@ -106,7 +106,7 @@ full_df = baad_df %>%
                               pft== "EG" ~ "gymnosperm",
                               pft=="DA" ~ "angiosperm") ) 
 
-###Figure 1:----
+###Figure 1----
 
 AM_ECM=c("#C49F50", "#91BBA8")
 
@@ -145,10 +145,10 @@ map=ggplot(data=world)+
 fig1 = ggarrange(map, clim_space, nrow=1, ncol=2,  widths = c(1.1, 1), labels=c("a", "b")) 
 ggsave("Figure_1.pdf", plot = fig1, width = 6 , height = 3.2, units = c("in"))
 
-####models-----
+####model prep-----
 #make clean dataset for models 
 full_df_mod <- full_df %>%
-  dplyr::select(RmTm, LmTm, SmTm, m.to, log_ht, leaf_habit, myc_group, Temp, Prec, study_species, family) %>%
+  dplyr::select(RmTm, LmTm, SmTm, m.to, log_ht, leaf_habit, myc_group, Temp, Prec, study_species, family, order) %>%
   drop_na() %>% 
   separate(study_species, into=c("Study", "Genus", "Species"), sep="_", remove=F) %>% 
   unite(SppName, c(Genus, Species), sep="_")
@@ -157,12 +157,16 @@ full_df_mod <- full_df %>%
 full_df_mod %>% group_by(myc_group) %>% summarise(fam_num = n_distinct(family))
 #families by myc type : 27 AM, 6 ECM
 
+full_df_mod %>% group_by(myc_group) %>% summarise(fam_num = n_distinct(order))
+#orders by myc type : 15 AM, 4 ECM
+
 full_df_mod %>% group_by(leaf_habit) %>% summarise(fam_num = n_distinct(family))
 #families by leaf habit: 18 decidous, 16 evergreen
 
 full_df_mod %>% group_by(leaf_habit, myc_group) %>% summarise(n = n())
 
 View(full_df_mod %>% group_by(family) %>% summarise(sp_num = n_distinct(SppName)))
+View(full_df_mod %>% group_by(order) %>% summarise(sp_num = n_distinct(SppName)))
 
 #check to see if variables need to be transformed
 hist(full_df_mod$RmTm)
@@ -170,46 +174,56 @@ hist(full_df_mod[full_df_mod$myc_group=="AM",]$RmTm)
 hist(full_df_mod$LmTm)
 hist(full_df_mod$SmTm)
 hist(full_df_mod$m.to) #needs transformation
-hist(log(full_df$m.to))
+full_df_mod$log_totbio = log(full_df_mod$m.to)
 
 #Total biomass model----
-T_mini_model <- lmer(log(m.to) ~ log_ht*myc_group + (1|study_species), data = full_df_mod)
+T_mini_model <- lmer(log_totbio ~ log_ht*myc_group + (1|study_species), data = full_df_mod)
 summary(T_mini_model)
 
-T_mini_model_f <- lmer(log(m.to) ~ log_ht*myc_group + family + (1|study_species), data = full_df_mod)
-summary(T_mini_model_f)
-
 #test full model with all interaction terms
-T_full_model <-lmer(log(m.to) ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+T_full_model <-lmer(log_totbio ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 vif(T_full_model)
 summary(T_full_model)
 
-#same but with plant family added
-T_full_model_f <-lmer(log(m.to) ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
-vif(T_full_model_f)
-summary(T_full_model_f)
+#remove insignificant interaction term (myc_group*Temp), testing for AIC improvement.
+T_reduced1 <- lmer(log_totbio ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+summary(T_reduced1)
+#all remaining terms are significant
 
-AIC(T_full_model, T_full_model_f)
-#AIC is better for the model with plant family *included*
+#check that the removal of interaction term also decreased AIC)
+AIC(T_full_model, T_reduced1)
 
-#remove insignificant interaction terms, testing for AIC improvement. Leave familiy in models
-T_reduced1_f <- lmer(log(m.to) ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
-summary(T_reduced1_f)
-
-T_reduced2_f <- lmer(log(m.to) ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Prec + family + (1|study_species), data = full_df_mod)
-summary(T_reduced2_f)
-
-T_reduced3_f <- lmer(log(m.to) ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + family + (1|study_species), data = full_df_mod)
-summary(T_reduced3_f)
-
-T_reduced4_f <- lmer(log(m.to) ~ log_ht*leaf_habit + log_ht*myc_group + family + (1|study_species), data = full_df_mod)
-summary(T_reduced4_f)
-
-AIC(T_full_model, T_full_model_f, T_reduced1_f, T_reduced2_f, T_reduced3_f, T_reduced4_f, T_mini_model, T_mini_model_f)
-
-#best model: T_reduced4_f
-T_E1 <- ggeffect(T_reduced4_f, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
+#get effects from final model 
+T_E1 <- ggeffect(T_reduced1, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 T_E1$height=exp(T_E1$x)
+
+#for supplement: 
+#repeat process with plant order added to model
+T_mini_model_o <- lmer(log_totbio ~ log_ht*myc_group + order + (1|study_species), data = full_df_mod)
+summary(T_mini_model_o)
+#no significant plant orders
+
+#full model with plant order added
+T_full_model_o <-lmer(log_totbio ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + order + (1|study_species), data = full_df_mod)
+vif(T_full_model_o)
+summary(T_full_model_o)
+#note: no significant plant orders
+
+#remove insignificant interaction (myc_group*Temp)
+T_reduced1_o <- lmer(log_totbio ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + order + (1|study_species), data = full_df_mod)
+summary(T_reduced1_o)
+
+#remove insignificant interaction (log_ht:Temp)
+T_reduced2_o <- lmer(log_totbio ~ log_ht*leaf_habit + log_ht*myc_group + leaf_habit*Temp + Prec + order+ (1|study_species), data = full_df_mod)
+summary(T_reduced2_o)
+
+#remove insignificant interaction (leaf_habit:Temp)
+T_reduced3_o <- lmer(log_totbio ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + order + (1|study_species), data = full_df_mod)
+summary(T_reduced3_o)
+
+#check AIC of various models with plant order
+AIC(T_full_model_o, T_reduced1_o, T_reduced2_o, T_reduced3_o)
+#T_reduced3_o is the best
 
 ##Root mass/total mass model----
 
@@ -222,43 +236,54 @@ R_full_model <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group
 vif(R_full_model)
 summary(R_full_model)
 
-#same but with plant family added
-R_full_model_f <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
-vif(R_full_model_f)
-
-summary(R_full_model_f)
-
-#remove insignificant interaction terms, testing for AIC improvement: log_ht*myc_group, Temp*myc_group, log_ht*Temp, Temp*leaf_habit (marginally significant)
+#remove insignificant interaction terms:  Temp*myc_group
 R_reduced1 <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 summary(R_reduced1)
 
-R_reduced2 <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
+#remove insignificant interaction term:  Temp*log_ht
+R_reduced2 <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 summary(R_reduced2)
 
-R_reduced3 <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + log_ht*Temp + Prec + (1|study_species), data = full_df_mod)
+#remove insignificant interaction term: Temp*log_ht
+R_reduced3 <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 summary(R_reduced3)
 
+#remove insignificant interaction terms:  Temp*leaf_habit
 R_reduced4 <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + Temp + Prec + (1|study_species), data = full_df_mod)
 summary(R_reduced4)
 vif(R_reduced4)
 
-AIC(R_full_model, R_full_model_f, R_reduced1, R_reduced2, R_reduced3, R_reduced4)
+#Test various reduuded models for AIC improvement
+AIC(R_full_model, R_reduced1, R_reduced2, R_reduced3, R_reduced4)
 #R_reduced4 is the best model
 
-#add family to the best reduced model
-R_reduced4_f <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + Temp + Prec + family + (1|study_species), data = full_df_mod)
-summary(R_reduced4_f)
-vif(R_reduced4_f)
+#for supplement: repeat process with plant order added to model
+R_full_model_o <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + order + (1|study_species), data = full_df_mod)
+vif(R_full_model_o)
+summary(R_full_model_o)
 
-#double check AIC
-AIC(R_reduced4, R_reduced4_f)
+#remove insignificant interaction terms:  Temp*leaf_habit
+R_reduced1_o <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Prec + order + (1|study_species), data = full_df_mod)
+summary(R_reduced1_o)
 
-#use ggeffect to calculate the marginal effects of myc group on RM/TM across tree heights
-R_E1 <- ggeffect(R_reduced4, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
-R_E1$height=exp(R_E1$x)
+#remove insignificant interaction term:  Temp*myc_group
+R_reduced2_o <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Prec + order + (1|study_species), data = full_df_mod)
+summary(R_reduced2_o)
+
+#remove insignificant interaction term: Myc_group*log_ht
+R_reduced3_o <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + log_ht*Temp + Prec + order + (1|study_species), data = full_df_mod)
+summary(R_reduced3_o)
+
+#remove insignificant interaction terms:  Temp*leaf_habit
+R_reduced4_o <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + Temp + Prec + order + (1|study_species), data = full_df_mod)
+summary(R_reduced4_o)
+vif(R_reduced4_o)
+
+#Test various reduuded models for AIC improvement
+AIC(R_full_model_o, R_reduced1_o, R_reduced2_o, R_reduced3_o, R_reduced4_o)
+#R_reduced4_o is the best model
 
 ##Leaf mass/total mass model----
-
 #first, test the simplest model to get an idea of the coefficient for myc
 L_mini_model <-lmer(LmTm ~ myc_group  + (1|study_species), data = full_df_mod)
 summary(L_mini_model)
@@ -268,35 +293,47 @@ L_full_model <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group
 vif(L_full_model)
 summary(L_full_model)
 
-#full model (all terms and interactions, including plant family)
-L_full_model_f <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
-vif(L_full_model_f)
-summary(L_full_model_f)
-
-#remove insignificant interaction terms, testing for AIC improvement
-L_reduced1 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + Temp*leaf_habit + Prec  + (1|study_species), data = full_df_mod)
+#remove insignificant interaction terms: Myc_group*Temp
+L_reduced1  <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 summary(L_reduced1)
 
-L_reduced2 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + Prec  + (1|study_species), data = full_df_mod)
+#remove insignificant interaction terms: Leaf_habit*Temp
+L_reduced2  <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Prec + (1|study_species), data = full_df_mod)
 summary(L_reduced2)
 
-L_reduced3 <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec  + (1|study_species), data = full_df_mod)
+#remove insignificant interaction terms: log_ht*Temp
+L_reduced3  <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + (1|study_species), data = full_df_mod)
 summary(L_reduced3)
 vif(L_reduced3)
 
-AIC(L_full_model, L_full_model_f, L_reduced1, L_reduced2, L_reduced3)
+AIC(L_full_model, L_reduced1, L_reduced2, L_reduced3)
 #L_reduced3 is the best model
-
-#add family to best reduced model and double check AIC
-L_reduced3_f <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + family + (1|study_species), data = full_df_mod)
-summary(L_reduced3_f)
-vif(L_reduced3_f)
-
-AIC(L_reduced3_f, L_reduced3)
 
 #use ggeffect to calculate the marginal effects of myc group across tree heights 
 L_E1 <- ggeffect(L_reduced3, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 L_E1$height=exp(L_E1$x)
+
+#repeat process but including plant order
+#full model (all terms and interactions, including plant order)
+L_full_model_o <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + order + (1|study_species), data = full_df_mod)
+vif(L_full_model_o)
+summary(L_full_model_o)
+
+#remove insignificant interactions: height*temp
+L_reduced1_o <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + Temp*leaf_habit + Prec + order + (1|study_species), data = full_df_mod)
+summary(L_reduced1_o)
+
+#remove insignificant interactions: height*temp
+L_reduced2_o <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + Prec + order + (1|study_species), data = full_df_mod)
+summary(L_reduced2_o)
+
+#remove insignificant interactions: myc_group*temp
+L_reduced3_o <-lmer(LmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + order + (1|study_species), data = full_df_mod)
+summary(L_reduced3_o)
+vif(L_reduced3_o)
+
+AIC(L_full_model_o, L_reduced1_o, L_reduced2_o, L_reduced3_o)
+#L_reduced3_o is best model
 
 #Stem mass/total mass full model----
 #first, test the simplest model to get an idea of the coefficient for myc
@@ -307,50 +344,67 @@ summary(S_mini_model)
 S_full_model <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 vif(S_full_model)
 summary(S_full_model)
-AIC(S_full_model)
 
-#test full model with all variables and reasonable interactions, including plant family
-S_full_model_f <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + family + (1|study_species), data = full_df_mod)
-vif(S_full_model_f)
-summary(S_full_model_f)
-AIC(S_full_model_f)
-
-#remove insignificant interactions, checking for AIC improvement
-S_reduced1 <- lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Prec + (1|study_species), data = full_df_mod)
+#remove insignificant interactions: height*myc_group
+S_reduced1 <-lmer(SmTm ~ log_ht*leaf_habit +  Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 summary(S_reduced1)
 
-S_reduced2 <- lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + Prec + (1|study_species), data = full_df_mod)
+#remove insignificant interactions: temp*myc_group
+S_reduced2 <-lmer(SmTm ~ log_ht*leaf_habit + myc_group + log_ht*Temp + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 summary(S_reduced2)
 
-S_reduced3 <- lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + (1|study_species), data = full_df_mod)
+#remove insignificant interactions: temp*height
+S_reduced3 <-lmer(SmTm ~ log_ht*leaf_habit + myc_group + Temp*leaf_habit + Prec + (1|study_species), data = full_df_mod)
 summary(S_reduced3)
 
-S_reduced4 <- lmer(SmTm ~ log_ht*leaf_habit + myc_group + Temp + Prec + (1|study_species), data = full_df_mod)
-summary(S_reduced4)
-
-S_reduced5 <- lmer(SmTm ~ log_ht + leaf_habit + myc_group + Temp + Prec + (1|study_species), data = full_df_mod)
-summary(S_reduced5)
-vif(S_reduced5)
-
 #confirm final reduced model has lowest AIC:
-AIC(S_reduced1,S_reduced2, S_reduced3, S_reduced4, S_reduced5, S_full_model)
-
-#add plant family back to reduced model and check AIC
-S_reduced5_f <- lmer(SmTm ~ log_ht + leaf_habit + myc_group + Temp + Prec + family + (1|study_species), data = full_df_mod)
-summary(S_reduced5_f)
-vif(S_reduced5_f)
-AIC(S_reduced5_f, S_reduced5)
+AIC(S_full_model, S_reduced1, S_reduced2, S_reduced3)
+#S_reduced3 is best
 
 #use ggeffect to calculate the marginal effects of myc group and height 
-S_E1 <- ggeffect(S_reduced5, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
+S_E1 <- ggeffect(S_reduced3, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 S_E1$height=exp(S_E1$x)
 
+#check results when plant order is added:
+#test full model with all variables and reasonable interactions, including plant order
+S_full_model_o <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + order + (1|study_species), data = full_df_mod)
+summary(S_full_model_o)
+
+#remove insignifncant interactions: myc_group*temp
+S_reduced1_o <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + order + (1|study_species), data = full_df_mod)
+summary(S_reduced1_o)
+
+#remove insignifncant interactions: leaf_habit*temp
+S_reduced2_o <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + log_ht*Temp + Prec + order + (1|study_species), data = full_df_mod)
+summary(S_reduced2_o)
+
+#remove insignifncant interactions: log_ht*temp
+S_reduced3_o <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp + Prec + order + (1|study_species), data = full_df_mod)
+summary(S_reduced3_o)
+
+#remove insignifncant interactions: log_ht*myc_group
+S_reduced4_o <-lmer(SmTm ~ log_ht*leaf_habit + myc_group + Temp + Prec + order + (1|study_species), data = full_df_mod)
+summary(S_reduced4_o)
+
+#remove insignifncant interactions: log_ht*leaf_habit
+S_reduced5_o <-lmer(SmTm ~ log_ht + leaf_habit + myc_group + Temp + Prec + order + (1|study_species), data = full_df_mod)
+summary(S_reduced5_o)
+
+AIC(S_full_model_o, S_reduced1_o, S_reduced2_o, S_reduced3_o, S_reduced4_o, S_reduced5_o)
+#S_reduced5_o is the best
+
 #combining models into a table and creating plots----
-# Best, reduced model output across all three tissue types and total biomass
-tab_model(L_reduced3, S_reduced5, R_reduced4, T_reduced4_f, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+tab_model(L_reduced3, S_reduced3, R_reduced4, T_reduced1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+
+# For supplment: best model output across all three tissue types and total biomass with order 
+tab_model(L_reduced3_o, S_reduced5_o, R_reduced4_o, T_reduced3_o, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+
+
+
 
 #Figure 2:
 #plot the marginal effects and the raw data for Rm/Tm
+full_df$log_totbio = log(full_df$m.to)
 
 a <- ggplot() +
   geom_point(data = full_df, aes(x = h.t, y = RmTm, color = myc_group, shape=leaf_habit), alpha = .15, size=3) +
@@ -405,10 +459,10 @@ e <- ggplot() +
   guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
 
 
-
+#best models: L_reduced3, S_reduced3, R_reduced4, T_reduced1
 R_E2 <- ggeffect(R_reduced4, terms = c("log_ht[0:1]", "myc_group"), type = "random")
 L_E2 <- ggeffect(L_reduced3, terms = c("log_ht[0:1]", "myc_group"), type = "random")
-S_E2 <- ggeffect(S_reduced5, terms = c("log_ht[0:1]", "myc_group"), type = "random")
+S_E2 <- ggeffect(S_reduced3, terms = c("log_ht[0:1]", "myc_group"), type = "random")
 
 L_E2=as.data.frame(L_E2) %>% 
   mutate(model="Leaf")
@@ -424,10 +478,10 @@ d_data=as.data.frame(R_E2) %>%
   mutate(ypos=case_when(model=="Leaf" ~ sum(predicted),
                         model=="Stem" ~ sum(predicted[model != "Leaf"]),
                         model=="Root" ~ predicted)) %>% 
-  mutate(scaled_proportion=case_when(group=="AM" ~ ypos/0.9907910,
-                                     group=="ECM" ~ ypos/0.9871502)) %>% 
-  mutate(scaled_predicted=case_when(group=="AM" ~ predicted/0.9907910,
-                                    group=="ECM" ~ predicted/0.9871502))
+  mutate(scaled_proportion=case_when(group=="AM" ~ ypos/0.978,
+                                     group=="ECM" ~ ypos/1.01)) %>% 
+  mutate(scaled_predicted=case_when(group=="AM" ~ predicted/0.978,
+                                    group=="ECM" ~ predicted/1.01))
 
 d_data$model=factor(d_data$model, levels=c("Leaf", "Stem", "Root"))
 d=ggplot(data=d_data, aes(x=group, y=scaled_predicted, fill=model))+
@@ -438,26 +492,20 @@ d=ggplot(data=d_data, aes(x=group, y=scaled_predicted, fill=model))+
   geom_errorbar(aes(ymin = scaled_proportion-std.error, ymax = scaled_proportion+std.error), width = 0.2, position="identity")+
   labs(x=" ", y= "Predicted proportion\nof total biomass")+
   theme(legend.title=element_blank())
-
-
-
+d
 ggarrange( b, c, a, d, labels=c("a", "b", "c" , "d"), nrow=2, ncol=2)
 #ggsave("Figure_2.tiff")
 
 ##phylogenetic analysis----
 AM_ECM=c("#C49F50", "#91BBA8")
+
 spp_sum <- full_df_mod %>%
-  group_by(SppName, myc_group) %>%
+  group_by(SppName, myc_group, leaf_habit, order, family) %>%
   summarise(n = n_distinct())
 
-library(ape)
-tree <- read.tree(file = "phyliptree1.phy")
-tree2 <- compute.brlen(tree, method = "Grafen")
-plot.phylo(tree2, cex = 0.7, tip.col = c(rep("#C49F50", 11), rep("#91BBA8", 2), rep("#C49F50", 8), rep("#91BBA8", 5), rep("#C49F50", 12), rep("#91BBA8", 7),  rep("#C49F50", 3), rep("#91BBA8", 7)))
-
-##better version
 #devtools::install_github("jinyizju/V.PhyloMaker")
 library(V.PhyloMaker)
+library(ape)
 
 #create df with species of interest in appropriate format
 sp_phy <- full_df_mod %>%
@@ -472,7 +520,21 @@ sp_phy <- full_df_mod %>%
 #generate tree
 tree.a <- phylo.maker(sp.list = sp_phy, tree = GBOTB.extended, nodes = nodes.info.1, scenarios="S3")
 
-plot.phylo(tree.a$scenario.3)
-is.ultrametric(tree.a$scenario.3)
+#reordering to color by myc type and shape by leaf habit
+reorder_idx <- match(spp_sum$SppName, tree.a$scenario.3$tip.label) 
+colors <- spp_sum %>%
+  arrange(reorder_idx) %>%
+  dplyr::select(myc_group)
+col <- as.factor(colors$myc_group)
+mycol <- c("#C49F50", "#91BBA8")[col]
 
-branching.times(tree.a$scenario.3)
+shps <- spp_sum %>%
+  arrange(reorder_idx) %>%
+  dplyr::select(leaf_habit)
+shps2 <- as.factor(shps$leaf_habit)
+myshps <- c(1,17)[shps2]
+
+#make figure with labelled phylogenetic tree of the tree speceis used in this analysis
+plot.phylo(tree.a$scenario.3, tip.color = mycol, cex = .7, label.offset = 12) 
+  tiplabels(pch = myshps, col = mycol, cex = .7, adj = 7)
+  add.simmap.legend()
