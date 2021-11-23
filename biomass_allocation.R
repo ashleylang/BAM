@@ -141,9 +141,6 @@ map=ggplot(data=world)+
   geom_point(aes(x = longitude, y = latitude,color=myc_group), data = sub, size = 1)+
   scale_colour_manual(values=AM_ECM)
 
-#Figure 1:
-fig1 = ggarrange(map, clim_space, nrow=1, ncol=2,  widths = c(1.1, 1), labels=c("a", "b")) 
-ggsave("Figure_1.pdf", plot = fig1, width = 6 , height = 3.2, units = c("in"))
 
 ####model prep-----
 #make clean dataset for models 
@@ -175,6 +172,7 @@ hist(full_df_mod$LmTm)
 hist(full_df_mod$SmTm)
 hist(full_df_mod$m.to) #needs transformation
 full_df_mod$log_totbio = log(full_df_mod$m.to)
+hist(full_df_mod$log_totbio)
 
 #Total biomass model----
 T_mini_model <- lmer(log_totbio ~ log_ht*myc_group + (1|study_species), data = full_df_mod)
@@ -256,6 +254,10 @@ vif(R_reduced4)
 #Test various reduuded models for AIC improvement
 AIC(R_full_model, R_reduced1, R_reduced2, R_reduced3, R_reduced4)
 #R_reduced4 is the best model
+
+R_E1 <- ggeffect(R_reduced4, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
+R_E1$height=exp(R_E1$x)
+
 
 #for supplement: repeat process with plant order added to model
 R_full_model_o <-lmer(RmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + order + (1|study_species), data = full_df_mod)
@@ -365,7 +367,6 @@ AIC(S_full_model, S_reduced1, S_reduced2, S_reduced3)
 S_E1 <- ggeffect(S_reduced3, terms = c("log_ht[-.7:3.5]", "myc_group"), type = "random")
 S_E1$height=exp(S_E1$x)
 
-#check results when plant order is added:
 #test full model with all variables and reasonable interactions, including plant order
 S_full_model_o <-lmer(SmTm ~ log_ht*leaf_habit + log_ht*myc_group + Temp*myc_group + log_ht*Temp + Temp*leaf_habit + Prec + order + (1|study_species), data = full_df_mod)
 summary(S_full_model_o)
@@ -400,10 +401,8 @@ tab_model(L_reduced3, S_reduced3, R_reduced4, T_reduced1, show.se = TRUE, show.c
 tab_model(L_reduced3_o, S_reduced5_o, R_reduced4_o, T_reduced3_o, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
 
 
-
-
 #Figure 2:
-#plot the marginal effects and the raw data for Rm/Tm
+#plot the marginal effects and the raw data
 full_df$log_totbio = log(full_df$m.to)
 
 a <- ggplot() +
@@ -496,7 +495,7 @@ d
 ggarrange( b, c, a, d, labels=c("a", "b", "c" , "d"), nrow=2, ncol=2)
 #ggsave("Figure_2.tiff")
 
-##phylogenetic analysis----
+##phylogenetic tree for Fig 1----
 AM_ECM=c("#C49F50", "#91BBA8")
 
 spp_sum <- full_df_mod %>%
@@ -535,6 +534,14 @@ shps2 <- as.factor(shps$leaf_habit)
 myshps <- c(1,17)[shps2]
 
 #make figure with labelled phylogenetic tree of the tree speceis used in this analysis
-plot.phylo(tree.a$scenario.3, tip.color = mycol, cex = .7, label.offset = 12) 
-  tiplabels(pch = myshps, col = mycol, cex = .7, adj = 7)
+plot(tree.a$scenario.3, tip.color = mycol, cex = .7, label.offset = 12, no.margin = TRUE) + tiplabels(pch = myshps, col = mycol, cex = 0.7, adj = 7)
+
+
+phylogeny <- as_grob(~plot(tree.a$scenario.3, tip.color = mycol, cex = .7, label.offset = 12, no.margin = TRUE) + tiplabels(pch = myshps, cex = .7, adj = 7))
+dev.off()
   
+#Figure 1:
+fig1 = ggarrange(map,  phylogeny, clim_space, nrow=2, ncol=2,  widths = c(1, 1, 1), labels=c("a", "b", "c")) 
+ggsave("Figure_1.pdf", plot = fig1, width = 6 , height = 3.2, units = c("in"))
+  
+ggarrange(ggarrange(map, clim_space, nrow = 2, labels = c("a", "c")), phylogeny, ncol = 2,  labels = c("", "b"))
