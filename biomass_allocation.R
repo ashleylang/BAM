@@ -106,7 +106,7 @@ full_df = baad_df %>%
                               pft== "EG" ~ "gymnosperm",
                               pft=="DA" ~ "angiosperm") ) 
 
-###Figure 1----
+###climate and geography of dataset----
 
 AM_ECM=c("#C49F50", "#91BBA8")
 
@@ -394,11 +394,20 @@ summary(S_reduced5_o)
 AIC(S_full_model_o, S_reduced1_o, S_reduced2_o, S_reduced3_o, S_reduced4_o, S_reduced5_o)
 #S_reduced5_o is the best
 
-#combining models into a table and creating plots----
-tab_model(L_reduced3, S_reduced3, R_reduced4, T_reduced1, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+#combining models into a table and creating Fig 2----
+#Table 1: three tissue types
+tab_model(L_reduced3, S_reduced3, R_reduced4,  show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
 
-# For supplment: best model output across all three tissue types and total biomass with order 
-tab_model(L_reduced3_o, S_reduced5_o, R_reduced4_o, T_reduced3_o, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+#Table S1: total biomass model with and without plant order
+tab_model(T_reduced1, T_reduced3_o, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+
+#Table S2: best model output across all three tissue types with plant order 
+tab_model(L_reduced3_o, S_reduced5_o, R_reduced4_o, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+
+#check for changes in models that include order
+tab_model(L_reduced3, L_reduced3_o, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+tab_model(S_reduced3, S_reduced5_o, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
+tab_model(R_reduced4, R_reduced4_o, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
 
 
 #Figure 2:
@@ -446,17 +455,17 @@ c <- ggplot() +
   ylim(0,1)+
   guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
 
-#plot the marginal effects and the raw data for total mass
+#plot the marginal effects and the raw data for total biomass: not for use in paper
 e <- ggplot() +
-  geom_point(data = full_df, aes(x = h.t, y = log(m.to), color = myc_group, shape=leaf_habit), alpha = .15, size=3) +
-  geom_line(data = T_E1, aes(x = height, y = predicted, color = group), size = 1.5) +
+  geom_point(data = full_df, aes(x = h.t, y = m.to, color = myc_group, shape=leaf_habit), alpha = .15, size=3) +
+  geom_line(data = T_E1, aes(x = height, y = exp(predicted), color = group), size = 1.5) +
   scale_colour_manual(name="Mycorrhizal Type", values=AM_ECM)+
   scale_shape_manual(name="Leaf Habit", labels = c("Deciduous", "Evergreen"), values=c(16,17)) +
   theme(legend.position = "none")+
-  scale_x_continuous(trans='log2', )+
-  labs(x= "Tree height (m)", y="Total biomass" )+
+  scale_x_continuous(trans='log2' )+
+  scale_y_continuous(trans='log10', breaks = c(0.01, 0.1, 1, 10, 100, 1000), labels=function(n){format(n, scientific = FALSE)})+
+  labs(x= "Tree height (m)", y="Total biomass (kg)" )+
   guides(color = guide_legend(override.aes = list(alpha=1), order=1), shape = guide_legend(override.aes = list(alpha=1), order=2))
-
 
 #best models: L_reduced3, S_reduced3, R_reduced4, T_reduced1
 R_E2 <- ggeffect(R_reduced4, terms = c("log_ht[0:1]", "myc_group"), type = "random")
@@ -477,10 +486,10 @@ d_data=as.data.frame(R_E2) %>%
   mutate(ypos=case_when(model=="Leaf" ~ sum(predicted),
                         model=="Stem" ~ sum(predicted[model != "Leaf"]),
                         model=="Root" ~ predicted)) %>% 
-  mutate(scaled_proportion=case_when(group=="AM" ~ ypos/0.978,
-                                     group=="ECM" ~ ypos/1.01)) %>% 
-  mutate(scaled_predicted=case_when(group=="AM" ~ predicted/0.978,
-                                    group=="ECM" ~ predicted/1.01))
+  mutate(scaled_proportion=case_when(group=="AM" ~ ypos/0.9778042,
+                                     group=="ECM" ~ ypos/1.0061589)) %>% 
+  mutate(scaled_predicted=case_when(group=="AM" ~ predicted/0.9778042,
+                                    group=="ECM" ~ predicted/1.0061589))
 
 d_data$model=factor(d_data$model, levels=c("Leaf", "Stem", "Root"))
 d=ggplot(data=d_data, aes(x=group, y=scaled_predicted, fill=model))+
@@ -492,8 +501,8 @@ d=ggplot(data=d_data, aes(x=group, y=scaled_predicted, fill=model))+
   labs(x=" ", y= "Predicted proportion\nof total biomass")+
   theme(legend.title=element_blank())
 d
-ggarrange( b, c, a, d, labels=c("a", "b", "c" , "d"), nrow=2, ncol=2)
-#ggsave("Figure_2.tiff")
+fig2 <- ggarrange( b, c, a, d, labels=c("a", "b", "c" , "d"), nrow=2, ncol=2)
+ggsave("Figure_2.pdf", plot = fig2, width = 8 , height = 7, units = c("in"))
 
 ##phylogenetic tree for Fig 1----
 AM_ECM=c("#C49F50", "#91BBA8")
@@ -514,7 +523,7 @@ sp_phy <- full_df_mod %>%
   separate(SppName, into = c("genus", "spp"), sep = "_") %>%
   dplyr::select(species,genus, family) %>%
   mutate(family = replace(family, family == "Aceraceae", "Sapindaceae"),
-         family = replace(family, family == "Taxodiaceae", "Cupressaceae"))
+         family = replace(family, family == "Taxodiaceae", "Cupressaceae")) #fix old familiy names
 
 #generate tree
 tree.a <- phylo.maker(sp.list = sp_phy, tree = GBOTB.extended, nodes = nodes.info.1, scenarios="S3")
@@ -531,17 +540,16 @@ shps <- spp_sum %>%
   arrange(reorder_idx) %>%
   dplyr::select(leaf_habit)
 shps2 <- as.factor(shps$leaf_habit)
-myshps <- c(1,17)[shps2]
+myshps <- c(16,17)[shps2]
 
 #make figure with labelled phylogenetic tree of the tree speceis used in this analysis
-plot(tree.a$scenario.3, tip.color = mycol, cex = .7, label.offset = 12, no.margin = TRUE) + tiplabels(pch = myshps, col = mycol, cex = 0.7, adj = 7)
+plot(tree.a$scenario.3, tip.color = mycol, cex = .6, label.offset = 12, no.margin = TRUE)
+tiplabels(pch = myshps, col = mycol, cex = .7, adj = 7)
+x <- recordPlot()
+phylogeny <- as_grob(x)
 
-
-phylogeny <- as_grob(~plot(tree.a$scenario.3, tip.color = mycol, cex = .7, label.offset = 12, no.margin = TRUE) + tiplabels(pch = myshps, cex = .7, adj = 7))
-dev.off()
-  
 #Figure 1:
-fig1 = ggarrange(map,  phylogeny, clim_space, nrow=2, ncol=2,  widths = c(1, 1, 1), labels=c("a", "b", "c")) 
-ggsave("Figure_1.pdf", plot = fig1, width = 6 , height = 3.2, units = c("in"))
-  
-ggarrange(ggarrange(map, clim_space, nrow = 2, labels = c("a", "c")), phylogeny, ncol = 2,  labels = c("", "b"))
+fig1ab <- ggarrange(map, clim_space, nrow = 2, labels = c("b", "c"))
+fig1 = ggarrange(phylogeny, fig1ab, widths = c(.5, 1), ncol = 2,  labels = c("a", ""))
+
+ggsave("Figure_1.pdf", plot = fig1, width = 10 , height = 6.1, units = c("in"))
