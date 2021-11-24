@@ -151,21 +151,22 @@ full_df_mod <- full_df %>%
   unite(SppName, c(Genus, Species), sep="_")
 #1429 observations
 
-full_df_mod %>% group_by(myc_group) %>% summarise(fam_num = n_distinct(family))
-#families by myc type : 27 AM, 6 ECM
+full_df_mod %>% group_by(myc_group) %>% summarise(fam_num = n_distinct(SppName))
+#species by myc type : 34 AM, 21 ECM
 
-full_df_mod %>% group_by(myc_group) %>% summarise(fam_num = n_distinct(order))
+unique(full_df_mod$order)
+#16 orders
+
+full_df_mod %>% group_by(myc_group) %>% summarise(order_num = n_distinct(order))
 #orders by myc type : 15 AM, 4 ECM
 
-full_df_mod %>% group_by(leaf_habit) %>% summarise(fam_num = n_distinct(family))
-#families by leaf habit: 18 decidous, 16 evergreen
+full_df_mod %>% group_by(leaf_habit) %>% summarise(order_num = n_distinct(order))
+#orders by leaf habit: 18 decidous, 16 evergreen
 
 full_df_mod %>% group_by(leaf_habit, myc_group) %>% summarise(n = n())
+#group numbers
 
-View(full_df_mod %>% group_by(family) %>% summarise(sp_num = n_distinct(SppName)))
-View(full_df_mod %>% group_by(order) %>% summarise(sp_num = n_distinct(SppName)))
-
-#check to see if variables need to be transformed
+#check variable distributions
 hist(full_df_mod$RmTm)
 hist(full_df_mod[full_df_mod$myc_group=="AM",]$RmTm)
 hist(full_df_mod$LmTm)
@@ -281,7 +282,7 @@ R_reduced4_o <-lmer(RmTm ~ log_ht*leaf_habit + myc_group + Temp + Prec + order +
 summary(R_reduced4_o)
 vif(R_reduced4_o)
 
-#Test various reduuded models for AIC improvement
+#Test various reducded models for AIC improvement
 AIC(R_full_model_o, R_reduced1_o, R_reduced2_o, R_reduced3_o, R_reduced4_o)
 #R_reduced4_o is the best model
 
@@ -408,7 +409,6 @@ tab_model(L_reduced3_o, S_reduced5_o, R_reduced4_o, show.se = TRUE, show.ci = FA
 tab_model(L_reduced3, L_reduced3_o, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
 tab_model(S_reduced3, S_reduced5_o, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
 tab_model(R_reduced4, R_reduced4_o, show.se = TRUE, show.ci = FALSE, show.std = "std2", digits = 3, digits.re = 3)
-
 
 #Figure 2:
 #plot the marginal effects and the raw data
@@ -551,5 +551,5 @@ phylogeny <- as_grob(x)
 #Figure 1:
 fig1ab <- ggarrange(map, clim_space, nrow = 2, labels = c("b", "c"))
 fig1 = ggarrange(phylogeny, fig1ab, widths = c(.5, 1), ncol = 2,  labels = c("a", ""))
-
+fig1
 ggsave("Figure_1.pdf", plot = fig1, width = 10 , height = 6.1, units = c("in"))
