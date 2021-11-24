@@ -151,21 +151,22 @@ full_df_mod <- full_df %>%
   unite(SppName, c(Genus, Species), sep="_")
 #1429 observations
 
-full_df_mod %>% group_by(myc_group) %>% summarise(fam_num = n_distinct(family))
-#families by myc type : 27 AM, 6 ECM
+full_df_mod %>% group_by(myc_group) %>% summarise(fam_num = n_distinct(SppName))
+#species by myc type : 34 AM, 21 ECM
 
-full_df_mod %>% group_by(myc_group) %>% summarise(fam_num = n_distinct(order))
+unique(full_df_mod$order)
+#16 orders
+
+full_df_mod %>% group_by(myc_group) %>% summarise(order_num = n_distinct(order))
 #orders by myc type : 15 AM, 4 ECM
 
-full_df_mod %>% group_by(leaf_habit) %>% summarise(fam_num = n_distinct(family))
-#families by leaf habit: 18 decidous, 16 evergreen
+full_df_mod %>% group_by(leaf_habit) %>% summarise(order_num = n_distinct(order))
+#orders by leaf habit: 18 decidous, 16 evergreen
 
 full_df_mod %>% group_by(leaf_habit, myc_group) %>% summarise(n = n())
+#group numbers
 
-#View(full_df_mod %>% group_by(family) %>% summarise(sp_num = n_distinct(SppName)))
-#View(full_df_mod %>% group_by(order) %>% summarise(sp_num = n_distinct(SppName)))
-
-#check to see if variables need to be transformed
+#check variable distributions
 hist(full_df_mod$RmTm)
 hist(full_df_mod[full_df_mod$myc_group=="AM",]$RmTm)
 hist(full_df_mod$LmTm)
