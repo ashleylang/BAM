@@ -542,7 +542,7 @@ shps <- spp_sum %>%
 shps2 <- as.factor(shps$leaf_habit)
 myshps <- c(16,17)[shps2]
 
-#make figure with labelled phylogenetic tree of the tree speceis used in this analysis
+#make figure with labelled phylogenetic tree of the tree species used in this analysis
 plot(tree.a$scenario.3, tip.color = mycol, cex = .6, label.offset = 12, no.margin = TRUE)
 tiplabels(pch = myshps, col = mycol, cex = .7, adj = 7)
 x <- recordPlot()
