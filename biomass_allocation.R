@@ -552,4 +552,4 @@ phylogeny <- as_grob(x)
 fig1ab <- ggarrange(map, clim_space, nrow = 2, labels = c("b", "c"))
 fig1 = ggarrange(phylogeny, fig1ab, widths = c(.5, 1), ncol = 2,  labels = c("a", ""))
 fig1
-ggsave("Figure_1.pdf", plot = fig1, width = 10 , height = 6.1, units = c("in"))
+#ggsave("Figure_1.pdf", plot = fig1, width = 9, height = 7, units = c("in"))
