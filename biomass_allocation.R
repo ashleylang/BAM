@@ -118,7 +118,7 @@ clim_space <- ggplot(sub, aes(x= Temp, y=Prec))+
   geom_point(aes(colour=myc_group,shape=leaf_habit, size=n), alpha=0.65)+
   scale_colour_manual(labels = c("AM", "ECM"),values=AM_ECM)+
   scale_shape_manual(labels = c("Deciduous", "Evergreen"), values=c(16,17))+
-  labs(x=expression("Mean Annual Temperature ("*degree*C*")"), y="Mean Annual Precipitation (mm)")+
+  labs(x=expression("Mean Annual Temperature ("*degree*C*")"), y="Mean Annual\nPrecipitation (mm)")+
   theme(legend.title=element_blank(),legend.margin = margin(0, 0, 0, 0),
         legend.spacing.x = unit(0, "mm"), legend.spacing.y = unit(0, "mm"), 
         legend.text=element_text(size=8), legend.position = c(.04, .85), 
