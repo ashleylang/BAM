@@ -9,6 +9,8 @@ The file biomass_allocation.R contains the code required to download the BAAD, F
 
 Figures 1 and 2 and Supplementary Table 1 from the published manuscript are available to view as separate files.
 
+https://zenodo.org/badge/latestdoi/362925068
+
  
 
 
