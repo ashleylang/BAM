@@ -1,5 +1,5 @@
 # BAM
-Supporting data and code for: Jevon and Lang, 2021; Tree biomass allocation differs by mycorrhizal association
+Supporting data and code for: Jevon and Lang, 2022; Tree biomass allocation differs by mycorrhizal association
 
 This analysis was made possible by the BAAD (Biomass And Allometry Database) for woody plants (Falster, et al. 2015, Ecology)
 FR_occurrences.csv and FR_measurements.csv are data files from the FungalRoot database (Soudzilovskaia, et al. 2020, New Phytologist)
